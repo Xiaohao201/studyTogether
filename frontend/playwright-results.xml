@@ -1,0 +1,107 @@
+<testsuites id="" name="" tests="1" failures="1" skipped="0" errors="0" time="41.856017">
+<testsuite name="pages\RegisterPage.spec.ts" timestamp="2026-02-11T10:37:26.262Z" hostname="chromium" tests="1" failures="1" skipped="0" time="26.763" errors="0">
+<testcase name="注册流程 › 应该成功注册新用户并重定向到登录页面" classname="pages\RegisterPage.spec.ts" time="26.763">
+<failure message="RegisterPage.spec.ts:87:7 应该成功注册新用户并重定向到登录页面" type="FAILURE">
+<![CDATA[  [chromium] › pages\RegisterPage.spec.ts:87:7 › 注册流程 › 应该成功注册新用户并重定向到登录页面 ─────────────────────────
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected pattern: /\/login/
+    Received string:  "http://localhost:3000/register"
+    Timeout: 10000ms
+
+    Call log:
+      - Expect "toHaveURL" with timeout 10000ms
+        13 × unexpected value "http://localhost:3000/register"
+
+
+       95 |
+       96 |     // 等待重定向到登录页面
+    >  97 |     await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+          |                        ^
+       98 |   });
+       99 |
+      100 |   test('点击登录链接应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\RegisterPage.spec.ts:97:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected pattern: /\/login/
+    Received string:  "http://localhost:3000/register"
+    Timeout: 10000ms
+
+    Call log:
+      - Expect "toHaveURL" with timeout 10000ms
+        13 × unexpected value "http://localhost:3000/register"
+
+
+       95 |
+       96 |     // 等待重定向到登录页面
+    >  97 |     await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+          |                        ^
+       98 |   });
+       99 |
+      100 |   test('点击登录链接应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\RegisterPage.spec.ts:97:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\..\test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+]]>
+</failure>
+<system-out>
+<![CDATA[
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\test-failed-1.png]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\video.webm]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\error-context.md]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\trace.zip]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\test-failed-1.png]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\video.webm]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\error-context.md]]
+
+[[ATTACHMENT|test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\trace.zip]]
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,0 +1,658 @@
+
+Running 33 tests using 1 worker
+
+  ✓   1 [chromium] › tests\e2e\pages\HomePage.spec.ts:8:7 › 首页 › 应该正确加载首页内容 (1.6s)
+  ✓   2 [chromium] › tests\e2e\pages\HomePage.spec.ts:26:7 › 首页 › 应该显示导航按钮 (1.5s)
+  ✓   3 [chromium] › tests\e2e\pages\HomePage.spec.ts:40:7 › 首页 › 点击注册按钮应该导航到注册页面 (1.7s)
+  ✘   4 [chromium] › tests\e2e\pages\HomePage.spec.ts:50:7 › 首页 › 点击地图按钮应该导航到地图页面 (6.9s)
+  ✘   5 [chromium] › tests\e2e\pages\HomePage.spec.ts:50:7 › 首页 › 点击地图按钮应该导航到地图页面 (retry #1) (6.9s)
+  ✓   6 [chromium] › tests\e2e\pages\HomePage.spec.ts:59:7 › 首页 › 点击登录按钮应该导航到登录页面 (1.9s)
+  ✓   7 [chromium] › tests\e2e\pages\HomePage.spec.ts:69:7 › 首页 › 应该显示 StudyTogether logo (1.5s)
+  ✓   8 [chromium] › tests\e2e\pages\LoginPage.spec.ts:10:7 › 登录流程 › 应该正确显示登录页面 (1.4s)
+  ✓   9 [chromium] › tests\e2e\pages\LoginPage.spec.ts:24:7 › 登录流程 › 应该显示表单验证错误 - 无效邮箱 (2.0s)
+  ✓  10 [chromium] › tests\e2e\pages\LoginPage.spec.ts:37:7 › 登录流程 › 应该显示表单验证错误 - 密码太短 (1.9s)
+  ✓  11 [chromium] › tests\e2e\pages\LoginPage.spec.ts:50:7 › 登录流程 › 应该显示密码显示/隐藏切换功能 (1.5s)
+  ✓  12 [chromium] › tests\e2e\pages\LoginPage.spec.ts:71:7 › 登录流程 › 应该使用无效凭据显示错误 (3.6s)
+  ✓  13 [chromium] › tests\e2e\pages\LoginPage.spec.ts:85:7 › 登录流程 › 点击注册链接应该导航到注册页面 (1.9s)
+  ✓  14 [chromium] › tests\e2e\pages\LoginPage.spec.ts:95:7 › 登录流程 › 点击返回首页链接应该导航到首页 (1.6s)
+  ✘  15 [chromium] › tests\e2e\pages\LoginPage.spec.ts:115:7 › 登录流程 (使用预创建用户) › 应该成功登录并重定向到地图页面 (32.9s)
+  ✘  16 [chromium] › tests\e2e\pages\LoginPage.spec.ts:115:7 › 登录流程 (使用预创建用户) › 应该成功登录并重定向到地图页面 (retry #1) (32.9s)
+  ✘  17 [chromium] › tests\e2e\pages\LoginPage.spec.ts:142:7 › 登录流程 (使用预创建用户) › 登录后应该存储认证令牌 (32.9s)
+  ✘  18 [chromium] › tests\e2e\pages\LoginPage.spec.ts:142:7 › 登录流程 (使用预创建用户) › 登录后应该存储认证令牌 (retry #1) (32.9s)
+  ✘  19 [chromium] › tests\e2e\pages\LoginPage.spec.ts:178:7 › 登录流程 (使用预创建用户) › 登录后页面刷新应该保持登录状态 (32.9s)
+  ✘  20 [chromium] › tests\e2e\pages\LoginPage.spec.ts:178:7 › 登录流程 (使用预创建用户) › 登录后页面刷新应该保持登录状态 (retry #1) (32.8s)
+  ✓  21 [chromium] › tests\e2e\pages\MapPage.spec.ts:11:7 › 地图页面 (未认证) › 应该重定向未认证用户到登录页面 (3.1s)
+  ✘  22 [chromium] › tests\e2e\pages\MapPage.spec.ts:38:7 › 地图页面 (已认证) › 应该显示用户信息 (33.0s)
+  ✘  23 [chromium] › tests\e2e\pages\MapPage.spec.ts:38:7 › 地图页面 (已认证) › 应该显示用户信息 (retry #1) (32.9s)
+  ✘  24 [chromium] › tests\e2e\pages\MapPage.spec.ts:66:7 › 地图页面 (已认证) › 应该显示侧边栏和地图容器 (32.9s)
+  ✘  25 [chromium] › tests\e2e\pages\MapPage.spec.ts:66:7 › 地图页面 (已认证) › 应该显示侧边栏和地图容器 (retry #1) (33.1s)
+  ✘  26 [chromium] › tests\e2e\pages\MapPage.spec.ts:96:7 › 地图页面 (已认证) › 应该显示附近用户列表或空状态 (32.9s)
+  ✘  27 [chromium] › tests\e2e\pages\MapPage.spec.ts:96:7 › 地图页面 (已认证) › 应该显示附近用户列表或空状态 (retry #1) (32.9s)
+  ✘  28 [chromium] › tests\e2e\pages\MapPage.spec.ts:125:7 › 地图页面 (已认证) › 应该能够退出登录 (33.0s)
+  ✘  29 [chromium] › tests\e2e\pages\MapPage.spec.ts:125:7 › 地图页面 (已认证) › 应该能够退出登录 (retry #1) (33.1s)
+  ✘  30 [chromium] › tests\e2e\pages\MapPage.spec.ts:160:7 › 地图页面 (已认证) › 退出后应该无法访问地图页面 (33.2s)
+  ✘  31 [chromium] › tests\e2e\pages\MapPage.spec.ts:160:7 › 地图页面 (已认证) › 退出后应该无法访问地图页面 (retry #1) (33.2s)
+  ✘  32 [chromium] › tests\e2e\pages\MapPage.spec.ts:196:7 › 地图页面 - UI 元素 › 应该显示状态栏按钮 (34.0s)
+  ✘  33 [chromium] › tests\e2e\pages\MapPage.spec.ts:196:7 › 地图页面 - UI 元素 › 应该显示状态栏按钮 (retry #1) (33.7s)
+  ✘  34 [chromium] › tests\e2e\pages\MapPage.spec.ts:219:7 › 地图页面 - UI 元素 › 应该显示退出按钮 (33.7s)
+  ✘  35 [chromium] › tests\e2e\pages\MapPage.spec.ts:219:7 › 地图页面 - UI 元素 › 应该显示退出按钮 (retry #1) (33.7s)
+  ✓  36 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:9:7 › 注册流程 › 应该正确显示注册页面 (1.5s)
+  ✓  37 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:25:7 › 注册流程 › 应该显示表单验证错误 - 用户名太短 (2.1s)
+  ✓  38 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:44:7 › 注册流程 › 应该显示表单验证错误 - 密码太短 (1.9s)
+  ✓  39 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:58:7 › 注册流程 › 应该显示表单验证错误 - 无效邮箱 (2.0s)
+  ✓  40 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:72:7 › 注册流程 › 应该显示表单验证错误 - 密码不匹配 (2.1s)
+  ✘  41 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:87:7 › 注册流程 › 应该成功注册新用户并重定向到登录页面 (12.5s)
+  ✘  42 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:87:7 › 注册流程 › 应该成功注册新用户并重定向到登录页面 (retry #1) (12.7s)
+  ✓  43 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:100:7 › 注册流程 › 点击登录链接应该导航到登录页面 (1.9s)
+  ✓  44 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:110:7 › 注册流程 › 点击返回首页链接应该导航到首页 (1.7s)
+  ✓  45 [chromium] › tests\e2e\pages\RegisterPage.spec.ts:120:7 › 注册流程 › 应该处理已存在的邮箱/用户名错误 (1.5s)
+
+
+  1) [chromium] › tests\e2e\pages\HomePage.spec.ts:50:7 › 首页 › 点击地图按钮应该导航到地图页面 ─────────────────────
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/map/[39m
+    Received string:  [31m"http://localhost:3000/login"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 5000ms[22m
+    [2m    4 × unexpected value "http://localhost:3000/"[22m
+    [2m    4 × unexpected value "http://localhost:3000/login"[22m
+
+
+      54 |     await homePage.clickMap();
+      55 |
+    > 56 |     await expect(page).toHaveURL(/\/map/);
+         |                        ^
+      57 |   });
+      58 |
+      59 |   test('点击登录按钮应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\HomePage.spec.ts:56:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/map/[39m
+    Received string:  [31m"http://localhost:3000/login"[39m
+    Timeout: 5000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 5000ms[22m
+    [2m    4 × unexpected value "http://localhost:3000/"[22m
+    [2m    4 × unexpected value "http://localhost:3000/login"[22m
+
+
+      54 |     await homePage.clickMap();
+      55 |
+    > 56 |     await expect(page).toHaveURL(/\/map/);
+         |                        ^
+      57 |   });
+      58 |
+      59 |   test('点击登录按钮应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\HomePage.spec.ts:56:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-HomePage-首页-点击地图按钮应该导航到地图页面-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests\e2e\pages\LoginPage.spec.ts:115:7 › 登录流程 (使用预创建用户) › 应该成功登录并重定向到地图页面 ───────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-应该成功登录并重定向到地图页面-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests\e2e\pages\LoginPage.spec.ts:142:7 › 登录流程 (使用预创建用户) › 登录后应该存储认证令牌 ───────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-登录后应该存储认证令牌-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests\e2e\pages\LoginPage.spec.ts:178:7 › 登录流程 (使用预创建用户) › 登录后页面刷新应该保持登录状态 ───────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-LoginPage-登录流程-使用预创建用户-登录后页面刷新应该保持登录状态-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests\e2e\pages\MapPage.spec.ts:38:7 › 地图页面 (已认证) › 应该显示用户信息 ─────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示用户信息-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests\e2e\pages\MapPage.spec.ts:66:7 › 地图页面 (已认证) › 应该显示侧边栏和地图容器 ─────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示侧边栏和地图容器-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests\e2e\pages\MapPage.spec.ts:96:7 › 地图页面 (已认证) › 应该显示附近用户列表或空状态 ───────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该显示附近用户列表或空状态-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests\e2e\pages\MapPage.spec.ts:125:7 › 地图页面 (已认证) › 应该能够退出登录 ────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-应该能够退出登录-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests\e2e\pages\MapPage.spec.ts:160:7 › 地图页面 (已认证) › 退出后应该无法访问地图页面 ───────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面-已认证-退出后应该无法访问地图页面-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests\e2e\pages\MapPage.spec.ts:196:7 › 地图页面 - UI 元素 › 应该显示状态栏按钮 ────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面---UI-元素-应该显示状态栏按钮-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests\e2e\pages\MapPage.spec.ts:219:7 › 地图页面 - UI 元素 › 应该显示退出按钮 ─────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-MapPage-地图页面---UI-元素-应该显示退出按钮-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests\e2e\pages\RegisterPage.spec.ts:87:7 › 注册流程 › 应该成功注册新用户并重定向到登录页面 ───────────
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/login/[39m
+    Received string:  [31m"http://localhost:3000/register"[39m
+    Timeout: 10000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 10000ms[22m
+    [2m    14 × unexpected value "http://localhost:3000/register"[22m
+
+
+       95 |
+       96 |     // 等待重定向到登录页面
+    >  97 |     await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+          |                        ^
+       98 |   });
+       99 |
+      100 |   test('点击登录链接应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\RegisterPage.spec.ts:97:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: [2mexpect([22m[31mpage[39m[2m).[22mtoHaveURL[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Expected pattern: [32m/\/login/[39m
+    Received string:  [31m"http://localhost:3000/register"[39m
+    Timeout: 10000ms
+
+    Call log:
+    [2m  - Expect "toHaveURL" with timeout 10000ms[22m
+    [2m    14 × unexpected value "http://localhost:3000/register"[22m
+
+
+       95 |
+       96 |     // 等待重定向到登录页面
+    >  97 |     await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+          |                        ^
+       98 |   });
+       99 |
+      100 |   test('点击登录链接应该导航到登录页面', async ({ page }) => {
+        at E:\studyTogether\frontend\tests\e2e\pages\RegisterPage.spec.ts:97:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\trace.zip
+    Usage:
+
+        npx playwright show-trace test-results\pages-RegisterPage-注册流程-应该成功注册新用户并重定向到登录页面-chromium-retry1\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12 failed
+    [chromium] › tests\e2e\pages\HomePage.spec.ts:50:7 › 首页 › 点击地图按钮应该导航到地图页面 ──────────────────────
+    [chromium] › tests\e2e\pages\LoginPage.spec.ts:115:7 › 登录流程 (使用预创建用户) › 应该成功登录并重定向到地图页面 ────────
+    [chromium] › tests\e2e\pages\LoginPage.spec.ts:142:7 › 登录流程 (使用预创建用户) › 登录后应该存储认证令牌 ────────────
+    [chromium] › tests\e2e\pages\LoginPage.spec.ts:178:7 › 登录流程 (使用预创建用户) › 登录后页面刷新应该保持登录状态 ────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:38:7 › 地图页面 (已认证) › 应该显示用户信息 ──────────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:66:7 › 地图页面 (已认证) › 应该显示侧边栏和地图容器 ──────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:96:7 › 地图页面 (已认证) › 应该显示附近用户列表或空状态 ────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:125:7 › 地图页面 (已认证) › 应该能够退出登录 ─────────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:160:7 › 地图页面 (已认证) › 退出后应该无法访问地图页面 ────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:196:7 › 地图页面 - UI 元素 › 应该显示状态栏按钮 ──────────────────
+    [chromium] › tests\e2e\pages\MapPage.spec.ts:219:7 › 地图页面 - UI 元素 › 应该显示退出按钮 ───────────────────
+    [chromium] › tests\e2e\pages\RegisterPage.spec.ts:87:7 › 注册流程 › 应该成功注册新用户并重定向到登录页面 ─────────────
+  21 passed (14.7m)
