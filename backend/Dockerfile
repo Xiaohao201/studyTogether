@@ -28,6 +28,5 @@ RUN echo "Build timestamp: $CACHEBUST" && \
 # Expose port
 EXPOSE 8000
 
-# Run database migrations and start server
-# Railway will inject DATABASE_URL with resolved variables
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start server (migrations will be run manually after deployment)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

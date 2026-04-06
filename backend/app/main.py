@@ -25,7 +25,14 @@ async def lifespan(app: FastAPI):
     print("[INFO] ⭐⭐⭐ CORS FIX DEPLOYMENT - 2025-04-06-09:00 ⭐⭐⭐")  # NEW MARKER!
     print(f"[INFO] 📦 Environment: {settings.ENVIRONMENT}")
     print(f"[INFO] 🔧 Debug mode: {settings.DEBUG}")
-    print(f"[INFO] 🗄️  Database: {settings.DATABASE_URL[:30]}...")
+
+    # Get database URL safely
+    try:
+        db_url = settings.get_database_url()
+        print(f"[INFO] 🗄️  Database: {db_url[:30]}...")
+    except Exception as e:
+        print(f"[WARNING] Database URL not configured: {e}")
+
     print("=" * 60)
 
     try:
@@ -159,6 +166,50 @@ async def check_postgis():
         result["error"] = str(e)
 
     return result
+
+
+@app.post("/admin/run-migrations")
+async def run_migrations():
+    """
+    Manually run Alembic database migrations.
+
+    WARNING: Only use this endpoint for initial setup or manual migration.
+    """
+    import subprocess
+    import json
+
+    try:
+        # Run alembic upgrade head
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        output = {
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
+
+        if result.returncode == 0:
+            print("[INFO] ✅ Database migrations completed successfully")
+        else:
+            print(f"[ERROR] ❌ Migration failed with return code {result.returncode}")
+
+        return output
+    except subprocess.TimeoutExpired:
+        return {
+            "success": False,
+            "error": "Migration timed out after 60 seconds"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 # Include routers
