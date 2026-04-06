@@ -43,10 +43,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Copy all files (using simpler approach without standalone)
-COPY --from=builder /app/public ./public
+# Copy public directory if it exists from builder stage
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
+
+# Try to copy public directory if it exists (Next.js apps may not have one)
+RUN mkdir -p ./public || true
 
 # Expose port
 EXPOSE 3000
