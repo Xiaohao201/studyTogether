@@ -17,4 +17,7 @@ const nextConfig = {
   },
 };
 
+// Force rebuild to pickup Railway environment variables
+// Build timestamp: 2025-04-06-15
+
 module.exports = nextConfig;
