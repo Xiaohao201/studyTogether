@@ -48,6 +48,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+print("=" * 60)
+print("[DEBUG] 🚀 StudyTogether API starting...")
+print("[DEBUG] 📦 CORS is configured to allow all origins")
+print("[DEBUG] 🔗 This is a deployment with updated CORS settings")
+print("=" * 60)
+
 # Configure CORS
 # TEMPORARY: Allow all origins to fix Railway deployment
 # TODO: Restrict to specific domains in production
