@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     PGHOST: str | None = None
     PGPORT: int = 5432
 
+    # PostgreSQL host override (for Railway cross-service connection)
+    POSTGRES_HOST: str | None = None
+
     # JWT
     SECRET_KEY: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
@@ -59,8 +62,8 @@ class Settings(BaseSettings):
                 "and PGDATABASE must be provided"
             )
 
-        # Use PGHOST or RAILWAY_PRIVATE_DOMAIN
-        host = self.PGHOST or os.getenv("RAILWAY_PRIVATE_DOMAIN", "localhost")
+        # Use POSTGRES_HOST, PGHOST, or fallback to localhost
+        host = self.POSTGRES_HOST or self.PGHOST or "localhost"
 
         return f"postgresql+asyncpg://{self.PGUSER}:{self.POSTGRES_PASSWORD}@{host}:{self.PGPORT}/{self.PGDATABASE}"
 
