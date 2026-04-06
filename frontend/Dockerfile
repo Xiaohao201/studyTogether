@@ -9,8 +9,19 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
-COPY . .
+# Copy all source files (including lib, components, etc.)
+COPY app ./app
+COPY components ./components
+COPY lib ./lib
+COPY store ./store
+COPY types ./types
+COPY public ./public
+COPY next.config.js ./
+COPY next-env.d.ts ./
+COPY tsconfig.json ./
+
+# List files to debug
+RUN ls -la && echo "=== lib directory ===" && ls -la lib/
 
 # Build application
 RUN npm run build
