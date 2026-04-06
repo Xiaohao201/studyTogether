@@ -56,16 +56,19 @@ class Settings(BaseSettings):
             return self.DATABASE_URL
 
         # Construct from components
-        if not all([self.PGUSER, self.POSTGRES_PASSWORD, self.PGDATABASE]):
+        if not all([self.POSTGRES_PASSWORD, self.PGDATABASE]):
             raise ValueError(
-                "DATABASE_URL must be set, or all of PGUSER, POSTGRES_PASSWORD, "
+                "DATABASE_URL must be set, or at least POSTGRES_PASSWORD "
                 "and PGDATABASE must be provided"
             )
 
         # Use POSTGRES_HOST, PGHOST, or fallback to localhost
         host = self.POSTGRES_HOST or self.PGHOST or "localhost"
 
-        return f"postgresql+asyncpg://{self.PGUSER}:{self.POSTGRES_PASSWORD}@{host}:{self.PGPORT}/{self.PGDATABASE}"
+        # Railway PostgreSQL might use empty username
+        username = self.PGUSER or ""
+
+        return f"postgresql+asyncpg://{username}:{self.POSTGRES_PASSWORD}@{host}:{self.PGPORT}/{self.PGDATABASE}"
 
 
 def get_settings() -> Settings:
