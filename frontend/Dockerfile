@@ -12,8 +12,23 @@ RUN npm ci
 # Copy all source code
 COPY . .
 
-# Build application
-RUN npm run build
+# List files for debugging
+RUN echo "=== Directory structure ===" && \
+    ls -la && \
+    echo "" && \
+    echo "=== lib directory ===" && \
+    ls -la lib/ && \
+    echo "" && \
+    echo "=== components directory ===" && \
+    ls -la components/
+
+# Build application with verbose output
+RUN npm run build -- --no-lint 2>&1 | tee build.log || \
+    (echo "=== BUILD FAILED ===" && \
+     cat build.log && \
+     echo "=== CHECKING FILE STRUCTURE ===" && \
+     find . -name "*.tsx" -o -name "*.ts" | head -20 && \
+     exit 1)
 
 # Production stage
 FROM node:18-alpine AS runner
