@@ -3,10 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { StudyMap } from '@/components/StudyMap';
-import { useAuthStore, useLocationStore } from '@/store';
-import type { NearbyUser } from '@/types';
+import { Button } from '../../components/ui/button';
+import { StudyMap } from '../../components/StudyMap';
+import { useAuthStore, useLocationStore } from '../../store';
+import type { NearbyUser } from '../../types';
 
 export default function MapPage() {
   const router = useRouter();

@@ -7,8 +7,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@/components/ui/button';
-import { useAuthStore } from '@/store';
+import { Button } from '../../components/ui/button';
+import { useAuthStore } from '../../store';
 
 // Validation schema
 const loginSchema = z.object({

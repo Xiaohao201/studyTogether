@@ -3,8 +3,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import AMapLoader from '@amap/amap-jsapi-loader';
-import type { NearbyUser } from '@/types';
-import { useLocationStore } from '@/store';
+import type { NearbyUser } from '../types';
+import { useLocationStore } from '../store';
 
 // AMap security configuration
 const AMAP_KEY = process.env.NEXT_PUBLIC_AMAP_KEY || '';

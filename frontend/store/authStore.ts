@@ -1,8 +1,8 @@
 // Authentication store using Zustand
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/types';
-import { authApi } from '@/lib/api';
+import type { User } from '../types';
+import { authApi } from '../lib/api';
 
 interface AuthState {
   user: User | null;

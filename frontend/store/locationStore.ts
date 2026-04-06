@@ -1,7 +1,7 @@
 // Location store using Zustand
 import { create } from 'zustand';
-import type { NearbyUser } from '@/types';
-import { locationsApi } from '@/lib/api';
+import type { NearbyUser } from '../types';
+import { locationsApi } from '../lib/api';
 
 interface LocationState {
   currentLocation: { latitude: number; longitude: number } | null;
