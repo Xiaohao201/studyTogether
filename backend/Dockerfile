@@ -28,5 +28,5 @@ RUN echo "Build timestamp: $CACHEBUST" && \
 # Expose port
 EXPOSE 8000
 
-# Run uvicorn server (production mode - use Railway's PORT)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run database migrations and start server
+CMD ["sh", "-c", "echo 'Running database migrations...' && alembic upgrade head && echo 'Migrations completed. Starting server...' && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

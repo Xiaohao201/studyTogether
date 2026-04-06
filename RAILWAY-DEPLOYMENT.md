@@ -1,534 +1,599 @@
 # Railway 部署指南
 
-StudyTogether 项目使用 Railway 进行云端部署。本指南将引导你完成整个部署流程。
+本文档提供 StudyTogether 项目在 Railway 平台上的完整部署流程。
 
 ---
 
-## 📋 部署前准备
+## 快速参考：数据库配置
 
-### 1. 必需账号
-- [x] GitHub 账号（已有）
-- [ ] Railway 账号：https://railway.app/
-- [ ] 高德地图 API Key：https://console.amap.com/
+**如果你找不到 PostGIS 插件，这是正常的！**
 
-### 2. 生成安全密钥
+正确步骤：
+1. ✅ 添加 **PostgreSQL** 插件（不是 PostGIS）
+2. ✅ 部署后端服务
+3. ✅ 在 Railway Console 运行：`alembic upgrade head`
+4. ✅ PostGIS 会自动启用（迁移脚本包含此逻辑）
 
-在本地终端运行以下命令生成强随机密钥：
+**详细说明见下方"二、数据库配置"章节。**
+
+---
+
+## 目录
+
+- [准备工作](#一准备工作)
+- [数据库配置](#二数据库配置关键步骤)
+- [环境变量配置](#三环境变量配置)
+- [部署后端](#四部署后端)
+- [部署前端](#五部署前端)
+- [初始化数据库](#六初始化数据库)
+- [配置文件说明](#七railway-配置文件说明)
+- [常见问题排查](#八常见问题排查)
+- [部署检查清单](#九部署检查清单)
+
+---
+
+## 一、准备工作
+
+### 1. 安装 Railway CLI
 
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(32))"
+npm install -g @railway/cli
+# 或
+brew install railway
 ```
 
-保存生成的密钥，后续配置时需要使用。
-
-### 3. 获取高德地图 API Key
-
-1. 访问 [高德开放平台](https://console.amap.com/)
-2. 注册/登录账号
-3. 创建应用，选择「Web端(JS API)」
-4. 获取 Key 和 Security密钥
-
----
-
-## 🎯 重要：Monorepo 部署说明
-
-**StudyTogether 是一个 monorepo 项目**，包含两个独立的子项目：
-
-- `backend/` - FastAPI 后端服务
-- `frontend/` - Next.js 前端应用
-
-**⚠️ 关键配置**：
-
-在 Railway 部署时，**必须**为每个服务设置正确的 **Root Directory**：
-
-| 服务 | Root Directory | 说明 |
-|------|---------------|------|
-| Backend | `backend` | 指向 `backend/` 目录 |
-| Frontend | `frontend` | 指向 `frontend/` 目录 |
-
-**如果你不设置 Root Directory，Railway 会尝试从根目录构建，导致失败！**
-
----
-
-## 🚀 部署步骤
-
-### 步骤 1：登录 Railway
-
-1. 访问 https://railway.app/
-2. 点击 **Login with GitHub**
-3. 授权 Railway 访问你的 GitHub 仓库
-
-### 步骤 2：创建新项目
-
-1. 点击 **New Project**
-2. 选择 **Deploy from GitHub repo**
-3. 选择你的仓库：`Xiaohao201/studyTogether`
-
----
-
-## 🗄️ 步骤 3：部署 PostgreSQL 数据库
-
-### 3.1 添加数据库服务
-
-在 Railway 项目中：
-
-1. 点击 **New Service**
-2. 选择 **Database**
-3. 选择 **PostgreSQL**
-4. 等待数据库创建完成（约 1-2 分钟）
-
-### 3.2 启用 PostGIS 扩展
-
-1. 进入数据库服务页面
-2. 点击 **Variables** 标签
-3. 添加以下环境变量：
+### 2. 登录 Railway
 
 ```bash
-POSTGRES_EXTENSIONS=postgis
+railway login
 ```
 
-4. 点击 **Console** 标签
-5. 在 SQL 编辑器中运行：
+### 3. 初始化项目
 
+```bash
+cd E:\studyTogether
+railway init
+```
+
+---
+
+## 二、数据库配置（关键步骤）
+
+**重要说明：** Railway 目前没有单独的 PostGIS 插件。我们需要使用 PostgreSQL 插件，然后手动启用 PostGIS 扩展。
+
+### 方式 1：通过 Railway UI（推荐）
+
+1. 在 Railway 项目中，点击 **"New Service"**
+2. 选择 **"Plugin"** → 搜索并选择 **"PostgreSQL"**（不是 PostGIS）
+3. Railway 会创建一个 PostgreSQL 数据库实例
+4. 数据库会自动设置 `DATABASE_URL` 环境变量
+
+### 方式 2：通过 CLI
+
+```bash
+# 添加 PostgreSQL 插件
+railway add --plugin postgresql
+
+# 验证数据库已添加
+railway status
+```
+
+### 启用 PostGIS 扩展（必须在数据库启动后执行）
+
+Railway 的 PostgreSQL 插件支持 PostGIS 扩展，但需要手动启用。推荐按以下顺序尝试：
+
+#### 方法 A：通过数据库迁移自动启用（最简单，推荐）
+
+**这是最简单的方法！** 你的项目迁移脚本已经包含自动启用 PostGIS 扩展的代码。
+
+**步骤：**
+
+1. 在 Railway UI 中，进入 **后端服务**（不是 PostgreSQL 服务）
+2. 找到 **"Exec"** 或 **"Execute"** 或 **"Terminal"** 标签页
+3. 执行以下命令：
+
+```bash
+# 等待服务完全启动
+sleep 5
+
+# 运行数据库迁移
+alembic upgrade head
+```
+
+迁移脚本（backend/alembic/versions/001_initial_schema.py:47）会自动执行：
 ```sql
 CREATE EXTENSION IF NOT EXISTS postgis;
 ```
 
-6. 验证 PostGIS 安装：
-
-```sql
-SELECT PostGIS_Version();
+4. 验证 PostGIS 是否启用：
+```bash
+# 访问后端的 debug 端点
+curl https://your-backend-domain.railway.app/debug/postgis
 ```
 
-### 3.3 获取数据库连接字符串
+如果返回 `"postgis_enabled": true`，说明扩展已成功启用。
 
-在数据库服务的 **Variables** 标签中，复制 `DATABASE_URL` 的值，格式类似：
+#### 方法 B：通过 Railway CLI（如果没有 UI 访问权限）
 
+```bash
+# 1. 列出所有服务
+railway status
+
+# 2. 在后端服务中执行命令
+railway run -s backend-service-name "alembic upgrade head"
+
+# 3. 验证
+railway run -s backend-service-name "curl http://localhost:8000/debug/postgis"
 ```
-postgresql://postgres:xxx@containers-us-west-xxx.railway.app:xxxx/railway
-```
 
-**重要**：将 `postgresql://` 改为 `postgresql+asyncpg://`（FastAPI 需要）：
+#### 方法 C：通过 Railway Web Terminal
 
-```
-postgresql+asyncpg://postgres:xxx@containers-us-west-xxx.railway.app:xxxx/railway
-```
+如果 Railway UI 提供了 Web Terminal 功能：
 
----
-
-## 🔧 步骤 4：部署后端服务
-
-### 4.1 创建后端服务
-
-1. 在 Railway 项目中点击 **New Service**
-2. 选择 **Deploy from GitHub repo**
-3. 再次选择 `Xiaohao201/studyTogether` 仓库
-
-**🔴 关键步骤 - 必须设置 Root Directory**：
-
-4. 在部署配置页面，点击 **"View Config"** 或 ⚙️ 图标
-5. 找到 **"Root Directory"** 字段
-6. 输入：`backend`（这告诉 Railway 只构建 `backend/` 目录）
-7. **Root Directory** 字段在展开的配置选项中，默认为根目录
-
-8. 确认配置：
-   - ✅ **Root Directory**: `backend`
-   - ✅ **Dockerfile Path**: `Dockerfile`（会自动检测到 backend/Dockerfile）
-
-9. 点击 **Deploy** 开始部署
-
-**预期结果**：Railway 应该能够检测到 Dockerfile 并成功构建。
-
-### 4.2 配置环境变量
-
-在后端服务的 **Variables** 标签中，添加以下变量：
-
-| 变量名 | 值 | 说明 |
-|--------|-----|------|
-| `DATABASE_URL` | `postgresql+asyncpg://...` | 从步骤 3.3 获取的连接字符串 |
-| `SECRET_KEY` | `你生成的随机密钥` | JWT 签名密钥 |
-| `FRONTEND_URL` | `https://your-frontend-domain.railway.app` | 前端 URL（部署后更新） |
-| `ENVIRONMENT` | `production` | 运行环境 |
-| `PORT` | `8000` | 服务端口 |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Token 过期时间 |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | `7` | 刷新 Token 有效期 |
-
-### 4.3 运行数据库迁移
-
-1. 等待后端部署完成（约 3-5 分钟）
-2. 点击后端服务的 **Console** 标签
-3. 点击 **New Console** → **Bash**
-4. 运行以下命令：
+1. 进入 **后端服务**
+2. 点击 **"Terminal"** 或 **"Shell"** 或 **"Exec"**
+3. 在打开的终端中执行：
 
 ```bash
 alembic upgrade head
 ```
 
-### 4.4 验证后端部署
+#### 方法 D：手动连接数据库（如果上述方法都不可用）
 
-1. 在后端服务页面，点击 **View Logs**
-2. 查看是否有错误信息
-3. 访问生成的域名（如 `https://studytogether-backend-xxx.railway.app/docs`）
-4. 应该能看到 FastAPI 的 Swagger 文档页面
+**重要说明：** Railway 的 PostgreSQL 插件通常不提供直接的 Console 访问。最可靠的方法是通过后端服务连接。
 
----
-
-## 🌐 步骤 5：部署前端服务
-
-### 5.1 创建前端服务
-
-1. 在 Railway 项目中点击 **New Service**
-2. 选择 **Deploy from GitHub repo**
-3. 再次选择 `Xiaohao201/studyTogether` 仓库
-
-**🔴 关键步骤 - 必须设置 Root Directory**：
-
-4. 在部署配置页面，点击 **"View Config"** 或 ⚙️ 图标
-5. 找到 **"Root Directory"** 字段
-6. 输入：`frontend`（这告诉 Railway 只构建 `frontend/` 目录）
-
-7. 确认配置：
-   - ✅ **Root Directory**: `frontend`
-   - ✅ **Build Command**: `npm run build`
-   - ✅ **Start Command**: `npm start`
-
-8. 点击 **Deploy** 开始部署
-
-**预期结果**：Railway 应该能够检测到 package.json 并成功构建 Next.js 应用。
-
-### 5.2 配置环境变量
-
-在前端服务的 **Variables** 标签中，添加以下变量：
-
-| 变量名 | 值 | 说明 |
-|--------|-----|------|
-| `NEXT_PUBLIC_BACKEND_URL` | `https://your-backend-domain.railway.app` | 后端 API 地址 |
-| `NEXT_PUBLIC_AMAP_KEY` | `你的高德地图 Key` | 高德地图 API Key |
-| `NEXT_PUBLIC_AMAP_SECRET` | `你的高德密钥` | 高德地图安全密钥 |
-| `PORT` | `3000` | 服务端口 |
-
-### 5.3 更新后端 CORS 配置
-
-**重要**：回到后端服务的环境变量，更新 `FRONTEND_URL` 为实际的 Railway 前端域名：
-
-```
-FRONTEND_URL=https://studytogether-frontend-xxx.railway.app
-```
-
-然后在后端 Console 中重启服务：
+在 **后端服务** 的 Terminal 中执行：
 
 ```bash
-# 或者直接在 Railway UI 中点击 "Restart" 按钮
+# 从 DATABASE_URL 环境变量中提取连接信息
+# 然后使用 psql 连接
+psql $DATABASE_URL -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+psql $DATABASE_URL -c "SELECT PostGIS_Version();"
 ```
 
----
-
-## ✅ 步骤 6：验证部署
-
-### 6.1 测试后端 API
-
-访问 `https://your-backend-domain.railway.app/docs`
-
-测试以下端点：
-
-1. **健康检查**
-   - `GET /health`
-   - 应返回：`{"status": "ok"}`
-
-2. **用户注册**
-   - `POST /api/auth/register`
-   - Body:
-     ```json
-     {
-       "username": "testuser",
-       "email": "test@example.com",
-       "password": "password123"
-     }
-     ```
-
-3. **用户登录**
-   - `POST /api/auth/login`
-   - Body:
-     ```json
-     {
-       "username": "testuser",
-       "password": "password123"
-     }
-     ```
-   - 应返回 access_token
-
-### 6.2 测试前端
-
-访问 `https://your-frontend-domain.railway.app`
-
-检查：
-- [ ] 页面正常加载
-- [ ] 地图显示正常
-- [ ] 能够注册/登录
-- [ ] WebSocket 连接成功（检查浏览器控制台）
-
-### 6.3 测试 WebSocket 连接
-
-1. 打开浏览器开发者工具（F12）
-2. 切换到 **Network** 标签
-3. 选择 **WS**（WebSocket）选项卡
-4. 登录后应该能看到 `socket.io` 连接
-
----
-
-## 🔒 步骤 7：生产环境配置
-
-### 7.1 配置自定义域名（可选）
-
-如果购买了域名，可以为服务配置自定义域名：
-
-1. 在服务页面点击 **Settings** → **Networking**
-2. 点击 **Custom Domain**
-3. 输入域名（如 `api.studytogether.com`）
-4. 按照提示配置 DNS 记录：
-
-```
-类型: CNAME
-名称: api
-值: xxx.railway.app
-```
-
-### 7.2 配置环境（推荐）
-
-在 Railway 中创建多个环境：
-
-- **Production**: 生产环境
-- **Staging**: 预发布环境
-- **Development**: 开发环境
-
-1. 点击项目名称 → **Settings**
-2. 在 **Environments** 中添加新环境
-3. 每个环境可以有不同的数据库和服务
-
-### 7.3 设置监控
-
-Railway 自动提供：
-
-- **Metrics**: CPU、内存、网络使用情况
-- **Logs**: 实时日志流
-- **Deployments**: 部署历史
-
-在项目首页可以查看所有服务的状态。
-
----
-
-## 💰 成本估算
-
-Railway 使用按量计费：
-
-| 服务 | 免费额度 | 超出后价格 |
-|------|---------|-----------|
-| PostgreSQL | $5 免费额度 | $0.25/GB 存储 + $0.00029/秒运行时间 |
-| Backend | $5 免费额度 | $0.00055/秒运行时间 |
-| Frontend | $5 免费额度 | $0.00055/秒运行时间 |
-
-**预计月成本**：$15-30（根据流量）
-
-启用计费：
-1. 点击用户头像 → **Settings**
-2. 在 **Payment Method** 中添加支付方式
-
----
-
-## 🔄 更新部署
-
-### 自动部署
-
-Railway 默认配置为自动部署。当你推送到 GitHub main 分支时：
-
-1. Railway 自动检测代码变化
-2. 重新构建服务
-3. 零停机部署
-
-### 手动触发部署
-
-1. 进入服务页面
-2. 点击 **Deployments** 标签
-3. 点击 **New Deployment**
-4. 选择分支和提交
-5. 点击 **Deploy**
-
----
-
-## 🐛 故障排查
-
-### 问题 0：Railpack 构建失败（"Script start.sh not found"）
-
-**症状**：
-```
-⚠ Script start.sh not found
-✖ Railpack could not determine how to build the app
-```
-
-**原因**：
-Railway 尝试从根目录构建项目，但这是一个 monorepo（包含 backend 和 frontend 两个子目录）。
-
-**解决方案**：
-1. 在 Railway 服务配置页面，点击 **⚙️ View Config**
-2. 找到 **Root Directory** 字段
-3. 根据服务类型输入：
-   - Backend 服务：输入 `backend`
-   - Frontend 服务：输入 `frontend`
-4. 点击 **Save** 或 **Redeploy**
-
-**⚠️ 这是必须的步骤！** 如果不设置 Root Directory，Railway 无法找到正确的构建文件（如 Dockerfile 或 package.json）。
-
-### 问题 1：数据库连接失败
-
-**症状**：后端日志显示 `connection refused`
-
-**解决方案**：
-1. 检查 `DATABASE_URL` 格式（必须是 `postgresql+asyncpg://`）
-2. 确认数据库服务正在运行
-3. 检查网络连接
-
-### 问题 2：CORS 错误
-
-**症状**：前端无法调用后端 API，浏览器控制台显示 CORS 错误
-
-**解决方案**：
-1. 确认后端 `FRONTEND_URL` 包含前端域名
-2. 检查后端 CORS 配置
-3. 确保环境变量正确（无拼写错误）
-
-### 问题 3：WebSocket 连接失败
-
-**症状**：实时位置更新不工作
-
-**解决方案**：
-1. 检查后端 Socket.io 配置
-2. 确认前端使用正确的后端 URL
-3. 检查防火墙规则
-
-### 问题 4：地图不显示
-
-**症状**：页面加载但地图区域空白
-
-**解决方案**：
-1. 验证 `NEXT_PUBLIC_AMAP_KEY` 是否正确
-2. 检查高德地图控制台的使用配额
-3. 查看浏览器控制台错误信息
-
-### 问题 5：构建失败
-
-**症状**：部署时显示 Build Error
-
-**解决方案**：
-1. 点击 **View Logs** 查看详细错误
-2. 检查 `package.json` 或 `requirements.txt` 依赖
-3. 本地运行 `npm run build` 或 `docker build` 复现错误
-
----
-
-## 📚 Railway 常用命令
-
-### 通过 Railway CLI
+或者使用 Python：
 
 ```bash
-# 安装 Railway CLI
-npm install -g railway
+python -c "
+from app.core.database import AsyncSessionLocal
+from sqlalchemy import text
+import asyncio
 
-# 登录
-railway login
+async def check_postgis():
+    async with AsyncSessionLocal() as db:
+        # 启用 PostGIS
+        await db.execute(text('CREATE EXTENSION IF NOT EXISTS postgis'))
+        await db.commit()
 
-# 查看项目状态
-railway status
+        # 验证
+        result = await db.execute(text('SELECT PostGIS_Version()'))
+        version = result.scalar()
+        print(f'PostGIS version: {version}')
 
-# 查看日志
-railway logs
+asyncio.run(check_postgis())
+"
+```
 
-# 打开控制台
-railway open
+#### 方法 E：使用 Railway CLI 的变量和运行功能
 
-# 查看环境变量
-railway variables
+```bash
+# 1. 确保 DATABASE_URL 格式正确（postgresql+asyncpg://）
+railway variables set DATABASE_URL="postgresql+asyncpg://..."
 
-# 添加环境变量
-railway variables set SECRET_KEY=your_key
+# 2. 重新部署后端
+railway up
 
+# 3. 部署完成后，访问 debug 端点验证
+curl https://your-backend-domain.railway.app/debug/postgis
+```
+
+---
+
+**推荐流程（按优先级）：**
+
+1. ✅ **方法 A** - 通过后端服务的 Exec/Terminal 运行 `alembic upgrade head`
+2. ✅ **方法 B** - 使用 Railway CLI
+3. ⚠️ **方法 D/E** - 通过后端连接数据库手动执行
+
+项目已包含自动启用 PostGIS 的逻辑。在后端首次启动时，检查 `/debug/postgis` 端点：
+
+```
+https://your-backend-domain.railway.app/debug/postgis
+```
+
+如果返回 `"postgis_enabled": true`，说明扩展已成功启用。
+
+#### 方法 C：通过数据库迁移脚本（自动启用 PostGIS）
+
+**这是最简单的方法！** 你的项目迁移脚本已经包含自动启用 PostGIS 扩展的代码。
+
+在后端服务的 Railway Console 中执行：
+
+```bash
 # 运行数据库迁移
-railway run alembic upgrade head
+alembic upgrade head
 ```
 
----
+迁移脚本（backend/alembic/versions/001_initial_schema.py:47）会自动执行：
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
 
-## ✨ 部署检查清单
-
-### 部署前
-- [x] 代码已推送到 GitHub
-- [x] 创建了 `railway.json` 配置文件
-- [x] 更新了 `.env.example`
-- [ ] 生成了安全的 `SECRET_KEY`
-- [ ] 获取了高德地图 API Key
-
-### 部署中
-- [ ] PostgreSQL + PostGIS 已启用
-- [ ] 后端服务已部署并配置环境变量
-- [ ] 运行了数据库迁移（`alembic upgrade head`）
-- [ ] 前端服务已部署并配置环境变量
-- [ ] 后端 CORS 已配置前端域名
-
-### 部署后
-- [ ] 测试了后端 API（/docs 页面）
-- [ ] 测试了前端页面加载
-- [ ] 测试了用户注册/登录流程
-- [ ] 测试了地图功能
-- [ ] 测试了 WebSocket 连接
-- [ ] 配置了监控和告警（可选）
+**无需手动启用 PostGIS，迁移脚本会自动处理！**
 
 ---
 
-## 🎯 下一步
+## 三、环境变量配置
 
-部署成功后，你可以：
+Railway 会自动注入 `DATABASE_URL`。你还需要手动添加以下环境变量。
 
-1. **添加数据收集**：使用 Google Analytics 或类似工具
-2. **配置 CDN**：Railway 自动通过 Cloudflare 提供全球加速
-3. **设置备份**：Railway 自动备份数据库（每天）
-4. **优化性能**：监控资源使用情况，按需扩容
-5. **添加日志聚合**：使用 Sentry、LogRocket 等工具
+### 通过 Railway UI 配置
 
----
-
-## 📞 获取帮助
-
-- **Railway 文档**: https://docs.railway.app/
-- **Railway Discord**: https://discord.gg/railway
-- **Railway GitHub**: https://github.com/railwayapp
-
----
-
-## 📝 快速参考
-
-### 重要链接
-
-- Railway 控制台: https://railway.app/
-- 你的项目: https://railway.app/project/xxx
-- 数据库管理: 在项目中点击 PostgreSQL 服务
-- 后端日志: https://railway.app/service/xxx/logs
-- 前端日志: https://railway.app/service/yyy/logs
-
-### 环境变量速查
+进入项目的 **"Variables"** 标签页，添加以下变量：
 
 ```bash
-# 后端必需
-DATABASE_URL=postgresql+asyncpg://...
-SECRET_KEY=your-random-secret-key
-FRONTEND_URL=https://your-frontend.railway.app
-ENVIRONMENT=production
+# JWT 密钥（生产环境必须更改）
+SECRET_KEY=your-super-secret-key-change-this-in-production
 
-# 前端必需
-NEXT_PUBLIC_BACKEND_URL=https://your-backend.railway.app
-NEXT_PUBLIC_AMAP_KEY=your_amap_key
+# Token 过期时间
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# 环境设置
+ENVIRONMENT=production
+DEBUG=false
+
+# 前端 URL（部署后需要更新为实际的前端 URL）
+FRONTEND_URL=https://your-frontend-domain.railway.app
+
+# 高德地图 API 密钥（用于前端）
+NEXT_PUBLIC_AMAP_KEY=your_amap_key_here
+NEXT_PUBLIC_AMAP_SECRET=your_amap_secret_here
+```
+
+### 生成安全的 SECRET_KEY
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
 ---
 
-**祝你部署成功！** 🎉
+## 四、部署后端
 
-如有问题，请查看 Railway 文档或提 Issue 到项目仓库。
+### 方式 1：通过 GitHub 集成（推荐）
+
+1. 在 Railway UI 中：
+   - 点击 **"New Service"**
+   - 选择 **"Deploy from GitHub repo"**
+   - 选择你的 StudyTogether 仓库
+   - **重要**：在 Root Directory 设置为 `backend`
+   - Railway 会自动读取 `backend/railway.json` 和 `backend/Dockerfile`
+
+2. 配置环境变量（见上一步）
+
+### 方式 2：通过 CLI
+
+```bash
+# 创建后端服务（指向 backend 目录）
+railway up --backend backend
+
+# 设置环境变量
+railway variables set SECRET_KEY="your-secret-key"
+railway variables set ENVIRONMENT=production
+railway variables set DEBUG=false
+```
+
+---
+
+## 五、部署前端
+
+### 1. 在 Railway UI 中
+
+- 点击 **"New Service"**
+- 选择 **"Deploy from GitHub repo"**
+- **Root Directory** 设置为 `frontend`
+- Railway 会读取 `frontend/railway.json` 和 `frontend/Dockerfile`
+
+### 2. 配置前端环境变量
+
+```bash
+# 后端 API URL（部署后从 Railway 获取）
+NEXT_PUBLIC_BACKEND_URL=https://your-backend-domain.railway.app
+
+# 高德地图配置
+NEXT_PUBLIC_AMAP_KEY=your_amap_key
+NEXT_PUBLIC_AMAP_SECRET=your_amap_secret
+```
+
+### 3. 获取后端 URL
+
+部署完成后，在 Railway UI 中：
+- 进入后端服务
+- 点击 **"Networking"**
+- 复制生成的域名（如 `https://xxx.up.railway.app`）
+
+---
+
+## 六、初始化数据库
+
+部署后端后，需要运行数据库迁移。
+
+### 1. 通过 Railway Console
+
+```bash
+# 连接到后端服务的控制台
+railway open --service "backend-service-name"
+
+# 或者直接在 Railway UI 中：Backend Service → Console
+
+# 在控制台中运行：
+alembic upgrade head
+
+# 验证 PostGIS 扩展
+psql $DATABASE_URL -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+psql $DATABASE_URL -c "SELECT PostGIS_Version();"
+```
+
+### 2. 验证部署
+
+访问健康检查端点：
+```
+https://your-backend-domain.railway.app/health/ready
+```
+
+应该返回：
+```json
+{
+  "status": "ready",
+  "service": "StudyTogether API",
+  "version": "0.1.0"
+}
+```
+
+检查 PostGIS：
+```
+https://your-backend-domain.railway.app/debug/postgis
+```
+
+---
+
+## 七、Railway 配置文件说明
+
+项目中已包含的配置文件：
+
+### backend/railway.json
+
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "dockerContext": ".",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/health/ready",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "numReplicas": 1
+  },
+  "buildCommand": "pip install -r requirements.txt"
+}
+```
+
+### frontend/railway.json
+
+```json
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "dockerContext": ".",
+    "dockerfilePath": "Dockerfile"
+  },
+  "deploy": {
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "numReplicas": 1
+  }
+}
+```
+
+### backend/Dockerfile
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies (includes geoalchemy2 for PostGIS)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Run uvicorn server (production mode - use Railway's PORT)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+```
+
+**关键特性：**
+- 使用 Python 3.11
+- 自动安装所有依赖（包括 geoalchemy2 PostGIS 支持）
+- 使用 Railway 提供的 `PORT` 环境变量
+
+---
+
+## 八、常见问题排查
+
+### 1. PostGIS 扩展未启用
+
+**症状：** 地理位置查询失败
+
+**解决方案：**
+
+在 Railway Console 中运行：
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+### 2. CORS 错误
+
+**症状：** 前端无法调用后端 API
+
+**解决方案：**
+
+确保 `FRONTEND_URL` 环境变量设置为实际的前端域名。
+
+检查后端 CORS 配置（backend/app/main.py:66-74）：
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 临时允许所有来源
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
+)
+```
+
+### 3. 数据库连接失败
+
+**症状：** `/health` 端点返回数据库未连接
+
+**解决方案：**
+
+检查 `DATABASE_URL` 格式：
+```
+postgresql+asyncpg://user:password@host:port/database
+```
+
+确保 Railway 的 PostGIS 插件正在运行。
+
+### 4. 构建失败
+
+**症状：** Docker 构建超时或失败
+
+**解决方案：**
+
+检查 Dockerfile 中的缓存破坏标记（backend/Dockerfile:4）：
+```dockerfile
+ARG CACHEBUST=2025-04-06-09
+```
+
+如果需要强制重新构建，更新这个时间戳。
+
+### 5. 查看日志
+
+```bash
+# 实时查看后端日志
+railway logs --service backend
+
+# 查看特定行数
+railway logs --service backend -n 100
+
+# 查看所有服务日志
+railway logs
+```
+
+---
+
+## 九、部署检查清单
+
+完成以下所有项以确保成功部署：
+
+### Railway 项目设置
+
+- [ ] Railway 项目已创建
+- [ ] PostGIS 插件已添加（不是普通 PostgreSQL）
+- [ ] `DATABASE_URL` 环境变量已自动设置
+
+### 后端配置
+
+- [ ] `SECRET_KEY` 已设置为强随机值
+- [ ] `ENVIRONMENT=production` 已设置
+- [ ] `DEBUG=false` 已设置
+- [ ] `ACCESS_TOKEN_EXPIRE_MINUTES=15` 已设置
+- [ ] `REFRESH_TOKEN_EXPIRE_DAYS=7` 已设置
+
+### 后端部署
+
+- [ ] 后端服务已部署并指向 `backend/` 目录
+- [ ] Dockerfile 成功构建
+- [ ] 健康检查 `/health/ready` 返回 200
+- [ ] PostGIS 检查 `/debug/postgis` 显示扩展已启用
+- [ ] 数据库迁移已运行（`alembic upgrade head`）
+
+### 前端配置
+
+- [ ] 前端服务已部署并指向 `frontend/` 目录
+- [ ] `NEXT_PUBLIC_BACKEND_URL` 已设置为后端域名
+- [ ] `NEXT_PUBLIC_AMAP_KEY` 已配置
+- [ ] `NEXT_PUBLIC_AMAP_SECRET` 已配置
+
+### 最终验证
+
+- [ ] 后端 API 可访问（`https://xxx.up.railway.app`）
+- [ ] 前端可访问（`https://yyy.up.railway.app`）
+- [ ] 前端可以成功调用后端 API
+- [ ] WebSocket 连接正常
+- [ ] 地图功能正常显示
+
+---
+
+## 十、项目结构总结
+
+```
+StudyTogether (GitHub Repository)
+├── backend/                    # Railway Service 1
+│   ├── railway.json           # Railway 配置
+│   ├── Dockerfile             # Docker 构建
+│   ├── requirements.txt       # 包含 geoalchemy2
+│   └── app/
+│       └── main.py            # 健康检查端点
+│
+└── frontend/                   # Railway Service 2
+    ├── railway.json           # Railway 配置
+    ├── Dockerfile             # Docker 构建
+    └── package.json
+```
+
+---
+
+## 十一、参考链接
+
+- [Railway 官方文档](https://docs.railway.app/)
+- [Railway PostGIS 插件](https://railway.app/plugin/postgis)
+- [FastAPI 部署指南](https://fastapi.tiangolo.com/deployment/)
+- [Next.js 部署指南](https://nextjs.org/docs/deployment)
+
+---
+
+## 十二、获取帮助
+
+如果遇到问题：
+
+1. 查看 Railway 日志：`railway logs`
+2. 检查环境变量配置
+3. 验证数据库连接
+4. 测试健康检查端点
+5. 查看 [项目 Issues](https://github.com/your-repo/issues)
+
+---
+
+**文档版本：** 1.0.0
+**最后更新：** 2025-04-06
