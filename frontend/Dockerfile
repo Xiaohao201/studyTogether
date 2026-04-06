@@ -22,13 +22,15 @@ RUN echo "=== Directory structure ===" && \
     echo "=== components directory ===" && \
     ls -la components/
 
-# Build application with verbose output
-RUN npm run build -- --no-lint 2>&1 | tee build.log || \
-    (echo "=== BUILD FAILED ===" && \
-     cat build.log && \
-     echo "=== CHECKING FILE STRUCTURE ===" && \
-     find . -name "*.tsx" -o -name "*.ts" | head -20 && \
-     exit 1)
+# Build application
+RUN npm run build
+
+# Check if standalone was created
+RUN echo "=== Checking .next directory ===" && \
+    ls -la .next/ && \
+    echo "" && \
+    echo "=== Checking for standalone ===" && \
+    ls -la .next/standalone/ || echo "standalone not found"
 
 # Production stage
 FROM node:18-alpine AS runner
@@ -37,13 +39,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy required files
+# Copy all files (using simpler approach without standalone)
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
 
 # Expose port
 EXPOSE 3000
 
-# Start application
-CMD ["node", "server.js"]
+# Start application with npm start
+CMD ["npm", "start"]
