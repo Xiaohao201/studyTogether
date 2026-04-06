@@ -37,6 +37,7 @@ export interface LocationUpdate {
 
 export interface NearbyUser extends User {
   distance_meters: number
+  city?: string
   location: {
     latitude: number
     longitude: number
