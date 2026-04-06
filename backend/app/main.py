@@ -49,9 +49,20 @@ app = FastAPI(
 )
 
 # Configure CORS
+# Allow Railway frontend and development URLs
+allowed_origins = [
+    settings.FRONTEND_URL,
+    "http://localhost:3000",
+    "https://victorious-achievement-production.up.railway.app",  # Railway frontend
+]
+
+# In production, allow all Railway subdomains
+if settings.ENVIRONMENT == "production":
+    allowed_origins.append("https://*.up.railway.app")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
