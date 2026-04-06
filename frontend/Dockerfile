@@ -1,6 +1,9 @@
 # Build stage
 FROM node:18-alpine AS builder
 
+# Force cache invalidation
+ARG CACHEBUST=2025-04-06-14
+
 WORKDIR /app
 
 # Copy package files
