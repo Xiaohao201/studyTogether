@@ -6,15 +6,6 @@ import AMapLoader from '@amap/amap-jsapi-loader';
 import type { NearbyUser } from '../types';
 import { useLocationStore } from '../store';
 
-// Extend Window interface for AMap security config
-declare global {
-  interface Window {
-    _AMapSecurityConfig?: {
-      securityJsCode: string
-    }
-  }
-}
-
 // AMap security configuration
 const AMAP_KEY = process.env.NEXT_PUBLIC_AMAP_KEY || '';
 const AMAP_SECRET = process.env.NEXT_PUBLIC_AMAP_SECRET || '';
@@ -48,7 +39,7 @@ export function StudyMap({
     }
 
     // Set security code (required by AMap)
-    window._AMapSecurityConfig = {
+    (window as any)._AMapSecurityConfig = {
       securityJsCode: AMAP_SECRET,
     };
 

@@ -1,6 +1,9 @@
 // Map page - displays nearby learners on a map
 'use client';
 
+// Force dynamic rendering to prevent SSR prerendering
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../components/ui/button';

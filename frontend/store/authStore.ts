@@ -25,16 +25,28 @@ interface AuthState {
 const ssrSafeStorage = {
   getItem: (name: string) => {
     if (typeof window === 'undefined') return null;
-    const value = localStorage.getItem(name);
-    return value ? JSON.parse(value) : null;
+    try {
+      const value = window.localStorage.getItem(name);
+      return value ? JSON.parse(value) : null;
+    } catch {
+      return null;
+    }
   },
   setItem: (name: string, value: any) => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(name, JSON.stringify(value));
+    try {
+      window.localStorage.setItem(name, JSON.stringify(value));
+    } catch {
+      // Silent fail for SSR or private browsing mode
+    }
   },
   removeItem: (name: string) => {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(name);
+    try {
+      window.localStorage.removeItem(name);
+    } catch {
+      // Silent fail for SSR or private browsing mode
+    }
   },
 };
 
