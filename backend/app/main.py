@@ -3,9 +3,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from sqlalchemy import text
 
 from app.core.config import get_settings
-from app.core.database import init_db, close_db
+from app.core.database import init_db, close_db, AsyncSessionLocal
 
 settings = get_settings()
 
@@ -15,15 +16,22 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     print("[INFO] Starting StudyTogether API...")
-    await init_db()
-    print("[INFO] Database initialized")
+    try:
+        await init_db()
+        print("[INFO] Database initialized successfully")
+    except Exception as e:
+        print(f"[WARNING] Database initialization failed: {e}")
+        print("[INFO] Application will start anyway, but database features may not work")
 
     yield
 
     # Shutdown
     print("[INFO] Shutting down StudyTogether API...")
-    await close_db()
-    print("[INFO] Database connections closed")
+    try:
+        await close_db()
+        print("[INFO] Database connections closed")
+    except Exception as e:
+        print(f"[WARNING] Error during shutdown: {e}")
 
 
 # Create FastAPI app
@@ -56,8 +64,23 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+    """Health check endpoint with database status."""
+    health_status = {
+        "status": "healthy",
+        "service": "StudyTogether API",
+        "version": "0.1.0"
+    }
+
+    # Check database connection
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        health_status["database"] = "connected"
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["database"] = f"disconnected: {str(e)}"
+
+    return health_status
 
 
 # Include routers
