@@ -9,9 +9,12 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
+# Get DATABASE_URL (may be constructed from components)
+database_url = settings.get_database_url()
+
 # Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    database_url,
     echo=settings.DEBUG,
     future=True,
 )

@@ -1,14 +1,23 @@
 """Application configuration using Pydantic Settings."""
 
+import os
 from pydantic_settings import BaseSettings
+
 # Removed lru_cache for development - settings reload on each call
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    # Database
-    DATABASE_URL: str
+    # Database - can be set directly or constructed from components
+    DATABASE_URL: str | None = None
+
+    # Database connection components (for Railway variable expansion)
+    PGUSER: str | None = None
+    POSTGRES_PASSWORD: str | None = None
+    PGDATABASE: str | None = None
+    PGHOST: str | None = None
+    PGPORT: int = 5432
 
     # JWT
     SECRET_KEY: str
@@ -37,6 +46,23 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         extra = "ignore"  # Ignore extra fields in .env
+
+    def get_database_url(self) -> str:
+        """Get DATABASE_URL, constructing from components if needed."""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
+
+        # Construct from components
+        if not all([self.PGUSER, self.POSTGRES_PASSWORD, self.PGDATABASE]):
+            raise ValueError(
+                "DATABASE_URL must be set, or all of PGUSER, POSTGRES_PASSWORD, "
+                "and PGDATABASE must be provided"
+            )
+
+        # Use PGHOST or RAILWAY_PRIVATE_DOMAIN
+        host = self.PGHOST or os.getenv("RAILWAY_PRIVATE_DOMAIN", "localhost")
+
+        return f"postgresql+asyncpg://{self.PGUSER}:{self.POSTGRES_PASSWORD}@{host}:{self.PGPORT}/{self.PGDATABASE}"
 
 
 def get_settings() -> Settings:
