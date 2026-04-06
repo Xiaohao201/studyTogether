@@ -6,13 +6,13 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
 import { useAuthStore, useLocationStore } from '../../store';
 import type { NearbyUser } from '../../types';
 
 // Dynamically import StudyMap to prevent SSR issues with AMap
-const StudyMap = dynamic(() => import('../../components/StudyMap').then(mod => ({ default: mod.StudyMap })), {
+const StudyMap = dynamicImport(() => import('../../components/StudyMap').then(mod => ({ default: mod.StudyMap })), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
