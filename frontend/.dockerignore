@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.local.example
+tests
+playwright-report
+test-results
+all-tests-output.txt
+nul
+certs
