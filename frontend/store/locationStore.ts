@@ -29,8 +29,8 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   startTracking: () => {
     set({ isTracking: true });
 
-    // Check if Geolocation API is available
-    if (!navigator.geolocation) {
+    // SSR check and Geolocation API availability
+    if (typeof window === 'undefined' || !navigator.geolocation) {
       set({ error: 'Geolocation is not supported by your browser' });
       return;
     }

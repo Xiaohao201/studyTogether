@@ -21,6 +21,23 @@ interface AuthState {
   clearError: () => void;
 }
 
+// Create SSR-safe storage for Zustand persist
+const ssrSafeStorage = {
+  getItem: (name: string) => {
+    if (typeof window === 'undefined') return null;
+    const value = localStorage.getItem(name);
+    return value ? JSON.parse(value) : null;
+  },
+  setItem: (name: string, value: any) => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(name, JSON.stringify(value));
+  },
+  removeItem: (name: string) => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(name);
+  },
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -36,9 +53,11 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authApi.login({ email, password });
 
-          // Store tokens
-          localStorage.setItem('access_token', response.access_token);
-          localStorage.setItem('refresh_token', response.refresh_token);
+          // Store tokens (client-side only)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('access_token', response.access_token);
+            localStorage.setItem('refresh_token', response.refresh_token);
+          }
 
           set({
             user: response.user,
@@ -121,6 +140,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      storage: ssrSafeStorage,
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

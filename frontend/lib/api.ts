@@ -5,10 +5,6 @@ import type { ApiResponse, AuthResponse, LoginCredentials, RegisterData, User } 
 // API base URL from environment
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
-// Debug: Log the API URL
-console.log('[API Client] Initializing with baseURL:', API_URL);
-console.log('[API Client] Environment NEXT_PUBLIC_BACKEND_URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
-
 // Create axios instance
 export const api = axios.create({
   baseURL: API_URL,
@@ -103,10 +99,12 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    // Remove tokens from localStorage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    // Remove tokens from localStorage (client-side only)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+    }
   },
 
   getCurrentUser: async (): Promise<User> => {
