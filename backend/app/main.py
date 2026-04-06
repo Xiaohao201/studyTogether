@@ -1,12 +1,17 @@
 """FastAPI application entry point."""
 
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 
 from app.core.config import get_settings
 from app.core.database import init_db, close_db, AsyncSessionLocal
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -48,22 +53,23 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-print("=" * 60)
-print("[DEBUG] 🚀 StudyTogether API starting...")
-print("[DEBUG] 📦 CORS is configured to allow all origins")
-print("[DEBUG] 🔗 This is a deployment with updated CORS settings")
-print("=" * 60)
+logger.info("=" * 60)
+logger.info("[DEBUG] 🚀 StudyTogether API starting with NEW CORS CONFIG...")
+logger.info("[DEBUG] 📦 CORS is configured to allow all origins (*)")
+logger.info("[DEBUG] 🔗 This deployment includes explicit OPTIONS handler")
+logger.info("=" * 60)
 
-# Configure CORS
+# Configure CORS - MUST be added before other middleware
 # TEMPORARY: Allow all origins to fix Railway deployment
 # TODO: Restrict to specific domains in production
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins temporarily
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=600,
 )
 
 # Handle OPTIONS requests explicitly for CORS preflight
@@ -71,7 +77,15 @@ from fastapi import Request
 @app.options("/{path:path}")
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS requests for CORS preflight."""
-    return {}
+    logger.info(f"[CORS] Handling OPTIONS request for: /{path}")
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Max-Age": "600",
+    }
+    logger.info(f"[CORS] Returning headers: {headers}")
+    return Response(headers=headers)
 
 
 @app.get("/")
