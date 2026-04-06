@@ -1,21 +1,20 @@
-"""UserLocation model with PostGIS support for geospatial queries."""
+"""UserLocation model with decimal coordinate storage."""
 
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Numeric, DateTime, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from geoalchemy2 import Geography
 
 from app.core.database import Base
 
 
 class UserLocation(Base):
     """
-    User location model with PostGIS geospatial support.
+    User location model using decimal coordinate storage.
 
     Stores both exact location (private) and fuzzy location (public).
-    Uses PostGIS Geography type for spatial queries.
+    Note: Railway does not support PostGIS, so we use standard decimal storage.
 
     Attributes:
         id: UUID primary key
@@ -24,8 +23,6 @@ class UserLocation(Base):
         longitude: Exact GPS longitude (±180°, ~1m precision)
         fuzzy_latitude: Jittered latitude for public display (~1km accuracy)
         fuzzy_longitude: Jittered longitude for public display
-        coordinates: PostGIS Geography POINT (exact, private)
-        fuzzy_coordinates: PostGIS Geography POINT (public, ~1km)
         country_code: ISO 3166-1 alpha-2 country code (cached geocoding)
         city: City name (cached geocoding)
         district: District name (cached geocoding)
@@ -50,11 +47,6 @@ class UserLocation(Base):
     fuzzy_latitude = Column(Numeric(10, 8), nullable=True)
     fuzzy_longitude = Column(Numeric(11, 8), nullable=True)
 
-    # PostGIS Geography types (WGS84 SRID 4326)
-    # Made nullable to support environments without PostGIS
-    coordinates = Column(Geography('POINT', srid=4326, spatial_index=False), nullable=True)
-    fuzzy_coordinates = Column(Geography('POINT', srid=4326), nullable=True)
-
     # Geocoding (cached)
     country_code = Column(String(2), nullable=True)  # ISO 3166-1 alpha-2
     city = Column(String(100), nullable=True)
@@ -69,6 +61,7 @@ class UserLocation(Base):
     # Indexes
     __table_args__ = (
         Index('idx_user_locations_user_created', 'user_id', 'created_at'),
+        Index('idx_user_locations_fuzzy_coords', 'fuzzy_latitude', 'fuzzy_longitude'),
     )
 
     def __repr__(self):
