@@ -51,8 +51,9 @@ class UserLocation(Base):
     fuzzy_longitude = Column(Numeric(11, 8), nullable=True)
 
     # PostGIS Geography types (WGS84 SRID 4326)
-    coordinates = Column(Geography('POINT', srid=4326, spatial_index=False))
-    fuzzy_coordinates = Column(Geography('POINT', srid=4326))
+    # Made nullable to support environments without PostGIS
+    coordinates = Column(Geography('POINT', srid=4326, spatial_index=False), nullable=True)
+    fuzzy_coordinates = Column(Geography('POINT', srid=4326), nullable=True)
 
     # Geocoding (cached)
     country_code = Column(String(2), nullable=True)  # ISO 3166-1 alpha-2

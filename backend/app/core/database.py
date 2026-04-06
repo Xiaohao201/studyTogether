@@ -46,9 +46,31 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database (create tables)."""
+    """Initialize database (create extensions and tables)."""
+    from sqlalchemy import text
+    import asyncio
+
     async with engine.begin() as conn:
+        # Check if PostGIS is available
+        try:
+            # Try to create PostGIS extension
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+            await conn.commit()
+            print("[INFO] ✓ PostGIS extension enabled successfully")
+
+            # Verify PostGIS is working
+            result = await conn.execute(text("SELECT PostGIS_Version()"))
+            version = result.scalar()
+            print(f"[INFO] ✓ PostGIS version: {version}")
+
+        except Exception as e:
+            print(f"[WARNING] PostGIS extension not available: {e}")
+            print("[WARNING] Location features will use fallback mode (decimal coordinates)")
+            print("[INFO] You can enable PostGIS by running: CREATE EXTENSION postgis;")
+
+        # Create tables (PostGIS columns will be nullable if extension is missing)
         await conn.run_sync(Base.metadata.create_all)
+        print("[INFO] ✓ Database tables initialized")
 
 
 async def close_db():

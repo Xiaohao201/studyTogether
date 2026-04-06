@@ -15,23 +15,29 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    print("[INFO] Starting StudyTogether API...")
+    print("=" * 60)
+    print("[INFO] 🚀 Starting StudyTogether API...")
+    print(f"[INFO] 📦 Environment: {settings.ENVIRONMENT}")
+    print(f"[INFO] 🔧 Debug mode: {settings.DEBUG}")
+    print(f"[INFO] 🗄️  Database: {settings.DATABASE_URL[:30]}...")
+    print("=" * 60)
+
     try:
         await init_db()
-        print("[INFO] Database initialized successfully")
+        print("[INFO] ✅ Application started successfully!")
     except Exception as e:
-        print(f"[WARNING] Database initialization failed: {e}")
-        print("[INFO] Application will start anyway, but database features may not work")
+        print(f"[ERROR] ❌ Database initialization failed: {e}")
+        print("[INFO] ⚠️  Application will start anyway, but features may be limited")
 
     yield
 
     # Shutdown
-    print("[INFO] Shutting down StudyTogether API...")
+    print("[INFO] 🛑 Shutting down StudyTogether API...")
     try:
         await close_db()
-        print("[INFO] Database connections closed")
+        print("[INFO] ✅ Database connections closed")
     except Exception as e:
-        print(f"[WARNING] Error during shutdown: {e}")
+        print(f"[WARNING] ⚠️  Error during shutdown: {e}")
 
 
 # Create FastAPI app
@@ -68,7 +74,8 @@ async def health_check():
     health_status = {
         "status": "healthy",
         "service": "StudyTogether API",
-        "version": "0.1.0"
+        "version": "0.1.0",
+        "database": "unknown"
     }
 
     # Check database connection
@@ -77,10 +84,50 @@ async def health_check():
             await db.execute(text("SELECT 1"))
         health_status["database"] = "connected"
     except Exception as e:
-        health_status["status"] = "degraded"
+        print(f"[ERROR] Database health check failed: {e}")
+        health_status["status"] = "unhealthy"
         health_status["database"] = f"disconnected: {str(e)}"
 
     return health_status
+
+
+@app.get("/health/ready")
+async def readiness_check():
+    """Simple readiness check (always returns 200 if service is running)."""
+    return {
+        "status": "ready",
+        "service": "StudyTogether API",
+        "version": "0.1.0"
+    }
+
+
+@app.get("/debug/postgis")
+async def check_postgis():
+    """Check PostGIS availability and version."""
+    from sqlalchemy import text
+
+    result = {
+        "postgis_enabled": False,
+        "postgis_version": None,
+        "error": None
+    }
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # Check if PostGIS extension exists
+            query = text("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'postgis')")
+            exists = await db.execute(query)
+            result["postgis_enabled"] = exists.scalar()
+
+            if result["postgis_enabled"]:
+                # Get PostGIS version
+                version_query = text("SELECT PostGIS_Version()")
+                version = await db.execute(version_query)
+                result["postgis_version"] = version.scalar()
+    except Exception as e:
+        result["error"] = str(e)
+
+    return result
 
 
 # Include routers
