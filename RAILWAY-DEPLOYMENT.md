@@ -30,6 +30,26 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ---
 
+## 🎯 重要：Monorepo 部署说明
+
+**StudyTogether 是一个 monorepo 项目**，包含两个独立的子项目：
+
+- `backend/` - FastAPI 后端服务
+- `frontend/` - Next.js 前端应用
+
+**⚠️ 关键配置**：
+
+在 Railway 部署时，**必须**为每个服务设置正确的 **Root Directory**：
+
+| 服务 | Root Directory | 说明 |
+|------|---------------|------|
+| Backend | `backend` | 指向 `backend/` 目录 |
+| Frontend | `frontend` | 指向 `frontend/` 目录 |
+
+**如果你不设置 Root Directory，Railway 会尝试从根目录构建，导致失败！**
+
+---
+
 ## 🚀 部署步骤
 
 ### 步骤 1：登录 Railway
@@ -103,9 +123,21 @@ postgresql+asyncpg://postgres:xxx@containers-us-west-xxx.railway.app:xxxx/railwa
 1. 在 Railway 项目中点击 **New Service**
 2. 选择 **Deploy from GitHub repo**
 3. 再次选择 `Xiaohao201/studyTogether` 仓库
-4. 配置：
-   - **Root Directory**: `backend`
-   - **Dockerfile Path**: `Dockerfile`
+
+**🔴 关键步骤 - 必须设置 Root Directory**：
+
+4. 在部署配置页面，点击 **"View Config"** 或 ⚙️ 图标
+5. 找到 **"Root Directory"** 字段
+6. 输入：`backend`（这告诉 Railway 只构建 `backend/` 目录）
+7. **Root Directory** 字段在展开的配置选项中，默认为根目录
+
+8. 确认配置：
+   - ✅ **Root Directory**: `backend`
+   - ✅ **Dockerfile Path**: `Dockerfile`（会自动检测到 backend/Dockerfile）
+
+9. 点击 **Deploy** 开始部署
+
+**预期结果**：Railway 应该能够检测到 Dockerfile 并成功构建。
 
 ### 4.2 配置环境变量
 
@@ -148,10 +180,21 @@ alembic upgrade head
 1. 在 Railway 项目中点击 **New Service**
 2. 选择 **Deploy from GitHub repo**
 3. 再次选择 `Xiaohao201/studyTogether` 仓库
-4. 配置：
-   - **Root Directory**: `frontend`
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
+
+**🔴 关键步骤 - 必须设置 Root Directory**：
+
+4. 在部署配置页面，点击 **"View Config"** 或 ⚙️ 图标
+5. 找到 **"Root Directory"** 字段
+6. 输入：`frontend`（这告诉 Railway 只构建 `frontend/` 目录）
+
+7. 确认配置：
+   - ✅ **Root Directory**: `frontend`
+   - ✅ **Build Command**: `npm run build`
+   - ✅ **Start Command**: `npm start`
+
+8. 点击 **Deploy** 开始部署
+
+**预期结果**：Railway 应该能够检测到 package.json 并成功构建 Next.js 应用。
 
 ### 5.2 配置环境变量
 
@@ -313,6 +356,27 @@ Railway 默认配置为自动部署。当你推送到 GitHub main 分支时：
 ---
 
 ## 🐛 故障排查
+
+### 问题 0：Railpack 构建失败（"Script start.sh not found"）
+
+**症状**：
+```
+⚠ Script start.sh not found
+✖ Railpack could not determine how to build the app
+```
+
+**原因**：
+Railway 尝试从根目录构建项目，但这是一个 monorepo（包含 backend 和 frontend 两个子目录）。
+
+**解决方案**：
+1. 在 Railway 服务配置页面，点击 **⚙️ View Config**
+2. 找到 **Root Directory** 字段
+3. 根据服务类型输入：
+   - Backend 服务：输入 `backend`
+   - Frontend 服务：输入 `frontend`
+4. 点击 **Save** 或 **Redeploy**
+
+**⚠️ 这是必须的步骤！** 如果不设置 Root Directory，Railway 无法找到正确的构建文件（如 Dockerfile 或 package.json）。
 
 ### 问题 1：数据库连接失败
 
