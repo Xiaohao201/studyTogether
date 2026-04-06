@@ -57,7 +57,15 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Handle OPTIONS requests explicitly for CORS preflight
+from fastapi import Request
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    """Handle OPTIONS requests for CORS preflight."""
+    return {}
 
 
 @app.get("/")
