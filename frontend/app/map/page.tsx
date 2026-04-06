@@ -4,12 +4,22 @@
 // Force dynamic rendering to prevent SSR prerendering
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { Button } from '../../components/ui/button';
-import { StudyMap } from '../../components/StudyMap';
 import { useAuthStore, useLocationStore } from '../../store';
 import type { NearbyUser } from '../../types';
+
+// Dynamically import StudyMap to prevent SSR issues with AMap
+const StudyMap = dynamic(() => import('../../components/StudyMap').then(mod => ({ default: mod.StudyMap })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <p>正在加载地图...</p>
+    </div>
+  ),
+});
 
 export default function MapPage() {
   const router = useRouter();
