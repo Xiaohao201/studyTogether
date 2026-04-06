@@ -22,6 +22,7 @@ async def lifespan(app: FastAPI):
     # Startup
     print("=" * 60)
     print("[INFO] 🚀 Starting StudyTogether API...")
+    print("[INFO] ⭐⭐⭐ CORS FIX DEPLOYMENT - 2025-04-06-09:00 ⭐⭐⭐")  # NEW MARKER!
     print(f"[INFO] 📦 Environment: {settings.ENVIRONMENT}")
     print(f"[INFO] 🔧 Debug mode: {settings.DEBUG}")
     print(f"[INFO] 🗄️  Database: {settings.DATABASE_URL[:30]}...")
