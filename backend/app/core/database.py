@@ -18,6 +18,16 @@ print(f"[DEBUG] 🗄️  Database URL (host): ...@{safe_url}")
 print(f"[DEBUG] 📋 Full DATABASE_URL from settings: {settings.DATABASE_URL[:50] if settings.DATABASE_URL else 'None'}...")
 print(f"[DEBUG] 🔧 PGUSER: '{settings.PGUSER}', PGHOST: '{settings.PGHOST}', POSTGRES_HOST: '{settings.POSTGRES_HOST}'")
 
+# Debug: Print all environment variables (database-related)
+import os
+db_vars = {k: v for k, v in os.environ.items() if any(keyword in k.upper() for keyword in ['PG', 'DATABASE', 'POSTGRES', 'RAILWAY'])}
+print(f"[DEBUG] 🔍 Database-related environment variables:")
+for key, value in sorted(db_vars.items()):
+    # Hide passwords
+    if 'PASSWORD' in key or 'TOKEN' in key:
+        value = value[:10] + '...' if len(value) > 10 else '***'
+    print(f"  {key}={value}")
+
 # Create async engine
 engine = create_async_engine(
     database_url,
