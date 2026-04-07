@@ -70,10 +70,11 @@ logger.info("=" * 60)
 # Configure CORS - MUST be added before other middleware
 # Allow all origins for public API accessibility
 # This is safe because sensitive endpoints require JWT authentication
+# Note: allow_credentials=False when using allow_origins=["*"] (CORS spec requirement)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins for public API
-    allow_credentials=True,  # Required for cookies/auth headers
+    allow_credentials=False,  # Must be False when using wildcard origin (CORS spec)
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
