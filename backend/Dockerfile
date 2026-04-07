@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Force rebuild timestamp
-ARG CACHEBUST=2025-04-06-09
+ARG CACHEBUST=2025-04-07-11
 
 WORKDIR /app
 
