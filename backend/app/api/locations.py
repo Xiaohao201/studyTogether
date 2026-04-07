@@ -92,10 +92,10 @@ async def delete_location(
 
 @router.get("/nearby", response_model=list[NearbyUserResponse])
 async def get_nearby_users(
+    db: DBSession,
     latitude: float = Query(..., ge=-90, le=90, description="Center point latitude"),
     longitude: float = Query(..., ge=-180, le=180, description="Center point longitude"),
     radius_km: float = Query(default=5.0, ge=0.1, le=50.0, description="Search radius in kilometers"),
-    db: DBSession,
 ):
     """
     Find nearby users who are currently studying.
