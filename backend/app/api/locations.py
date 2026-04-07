@@ -95,8 +95,7 @@ async def get_nearby_users(
     latitude: float = Query(..., ge=-90, le=90, description="Center point latitude"),
     longitude: float = Query(..., ge=-180, le=180, description="Center point longitude"),
     radius_km: float = Query(default=5.0, ge=0.1, le=50.0, description="Search radius in kilometers"),
-    current_user: CurrentUser = None,
-    db: DBSession = None,
+    db: DBSession,
 ):
     """
     Find nearby users who are currently studying.
@@ -111,12 +110,12 @@ async def get_nearby_users(
     """
     location_service = LocationService(db)
 
-    # Find nearby users
+    # Find nearby users (no user filter - public endpoint)
     nearby = await location_service.find_nearby_users(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
-        user_id=str(current_user.id) if current_user else None,
+        user_id=None,  # Don't exclude any user
         privacy_filter=['fuzzy', 'exact']
     )
 
