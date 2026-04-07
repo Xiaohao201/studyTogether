@@ -68,17 +68,13 @@ logger.info("[DEBUG] 🔗 This deployment includes explicit OPTIONS handler")
 logger.info("=" * 60)
 
 # Configure CORS - MUST be added before other middleware
-# Allow both frontend and backend Railway domains
+# Allow all origins for public API accessibility
+# This is safe because sensitive endpoints require JWT authentication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://studytogether-production-86d1.up.railway.app",  # Frontend
-        "https://studytogether-production.up.railway.app",        # Backend
-        "http://localhost:3000",                                   # Local development
-        "http://localhost:8000",                                   # Local development
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=["*"],  # Allow all origins for public API
+    allow_credentials=True,  # Required for cookies/auth headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
     max_age=600,
@@ -89,14 +85,16 @@ from fastapi import Request
 @app.options("/{path:path}")
 async def options_handler(request: Request, path: str):
     """Handle OPTIONS requests for CORS preflight."""
-    logger.info(f"[CORS] Handling OPTIONS request for: /{path}")
+    origin = request.headers.get("origin", "unknown")
+    logger.info(f"[CORS] Handling OPTIONS request for: /{path} from origin: {origin}")
+
     headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Origin": "*",  # Allow all origins
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
         "Access-Control-Allow-Headers": "*",
         "Access-Control-Max-Age": "600",
     }
-    logger.info(f"[CORS] Returning headers: {headers}")
+    logger.info(f"[CORS] Returning headers: {list(headers.keys())}")
     return Response(headers=headers)
 
 
