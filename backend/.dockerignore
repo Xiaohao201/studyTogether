@@ -1,0 +1,36 @@
+# Ignore local environment files (use Railway environment variables instead)
+.env
+.env.local
+.env.*.local
+
+# Ignore development files
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore testing files
+.pytest_cache
+.coverage
+htmlcov
+
+# Ignore documentation
+*.md
+docs/
