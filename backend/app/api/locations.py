@@ -119,6 +119,12 @@ async def get_nearby_users(
         privacy_filter=['fuzzy', 'exact']
     )
 
+    # Debug logging
+    print(f"[DEBUG] Nearby users query result: {len(nearby)} users found")
+    for item in nearby:
+        user = item['user']
+        print(f"[DEBUG] User: {user.username}, Status: {user.status}, Privacy: {user.privacy_mode}")
+
     # Format response
     results = []
     for item in nearby:
@@ -140,6 +146,7 @@ async def get_nearby_users(
             district=location.district,
         ))
 
+    print(f"[DEBUG] Returning {len(results)} nearby users to frontend")
     return results
 
 

@@ -74,8 +74,11 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const users = await locationsApi.findNearby(latitude, longitude, radiusKm);
+      console.log('[DEBUG] Fetched nearby users:', users);
+      console.log('[DEBUG] Number of users:', users.length);
       set({ nearbyUsers: users, isLoading: false });
     } catch (error: any) {
+      console.error('[DEBUG] Failed to fetch nearby users:', error);
       set({
         error: error.response?.data?.detail || 'Failed to fetch nearby users',
         isLoading: false,
