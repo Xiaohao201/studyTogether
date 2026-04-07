@@ -26,6 +26,8 @@ class SessionService:
         """
         Create a new study session.
 
+        Also updates user's status to 'studying' and subject to the session subject.
+
         Args:
             user_id: User UUID
             session_data: Session creation data (subject)
@@ -42,6 +44,10 @@ class SessionService:
         )
 
         self.db.add(session)
+
+        # Update user's status to 'studying' and set subject
+        await self._update_user_status(user_id, 'studying', session_data.subject)
+
         await self.db.commit()
         await self.db.refresh(session)
 
@@ -54,6 +60,8 @@ class SessionService:
     ) -> Optional[StudySession]:
         """
         End a study session and calculate duration.
+
+        Also updates user's status to 'offline' and updates total study time.
 
         Args:
             session_id: Session UUID
@@ -79,6 +87,9 @@ class SessionService:
         session.ended_at = datetime.utcnow()
         duration = session.ended_at - session.started_at
         session.duration_minutes = int(duration.total_seconds() / 60)
+
+        # Update user's status to 'offline'
+        await self._update_user_status(user_id, 'offline')
 
         await self.db.commit()
         await self.db.refresh(session)
@@ -184,3 +195,31 @@ class SessionService:
         if user:
             user.study_duration_minutes += additional_minutes
             await self.db.commit()
+
+    async def _update_user_status(
+        self,
+        user_id: str,
+        status: str,
+        subject: Optional[str] = None
+    ) -> None:
+        """
+        Update user's status and optionally subject.
+
+        Args:
+            user_id: User UUID
+            status: New status ('studying', 'break', 'offline')
+            subject: Optional subject to set
+        """
+        query = (
+            select(User)
+            .where(User.id == uuid.UUID(user_id))
+        )
+
+        result = await self.db.execute(query)
+        user = result.scalar_one_or_none()
+
+        if user:
+            user.status = status
+            if subject:
+                user.subject = subject
+            # Don't commit here - caller will commit

@@ -8,7 +8,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
-import { useAuthStore, useLocationStore } from '../../store';
+import { useAuthStore, useLocationStore, useSessionStore } from '../../store';
 import type { NearbyUser } from '../../types';
 
 // Dynamically import StudyMap to prevent SSR issues with AMap
@@ -33,8 +33,16 @@ export default function MapPage() {
     fetchNearbyUsers,
     isLoading,
   } = useLocationStore();
+  const {
+    activeSession,
+    startSession,
+    endSession,
+    fetchActiveSession,
+  } = useSessionStore();
 
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [showSubjectDialog, setShowSubjectDialog] = useState(false);
+  const [subjectInput, setSubjectInput] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -56,6 +64,36 @@ export default function MapPage() {
       fetchNearbyUsers(currentLocation.latitude, currentLocation.longitude, 5);
     }
   }, [currentLocation]);
+
+  // Fetch active session on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchActiveSession();
+    }
+  }, [isAuthenticated]);
+
+  // Handle starting a session
+  const handleStartSession = async () => {
+    if (!subjectInput.trim()) {
+      return;
+    }
+    try {
+      await startSession(subjectInput);
+      setShowSubjectDialog(false);
+      setSubjectInput('');
+    } catch (error) {
+      console.error('Failed to start session:', error);
+    }
+  };
+
+  // Handle ending a session
+  const handleEndSession = async () => {
+    try {
+      await endSession();
+    } catch (error) {
+      console.error('Failed to end session:', error);
+    }
+  };
 
   const handleLogout = async () => {
     stopTracking();
@@ -174,23 +212,63 @@ export default function MapPage() {
           <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
             <div className="flex items-center space-x-4">
               <span className="text-gray-600 dark:text-gray-400">
-                状态: <span className="font-medium text-green-600">在线</span>
+                状态: <span className={`font-medium ${activeSession ? 'text-green-600' : 'text-gray-600'}`}>
+                  {activeSession ? '学习中' : '在线'}
+                </span>
               </span>
               <span className="text-gray-600 dark:text-gray-400">
                 位置: <span className="font-medium">已共享</span>
               </span>
-              {user.subject && (
+              {activeSession && (
                 <span className="text-gray-600 dark:text-gray-400">
-                  学习: <span className="font-medium">{user.subject}</span>
+                  学习: <span className="font-medium">{activeSession.subject}</span>
                 </span>
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <Button size="sm" variant="outline">
-                更新状态
+              {activeSession ? (
+                <Button size="sm" variant="destructive" onClick={handleEndSession}>
+                  结束学习
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => setShowSubjectDialog(true)}>
+                  开始学习会话
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subject Dialog */}
+      {showSubjectDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">开始学习会话</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              你要学习什么科目？
+            </p>
+            <input
+              type="text"
+              value={subjectInput}
+              onChange={(e) => setSubjectInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleStartSession()}
+              placeholder="例如：Python编程、考研数学"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white mb-4"
+              autoFocus
+            />
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSubjectDialog(false);
+                  setSubjectInput('');
+                }}
+              >
+                取消
               </Button>
-              <Button size="sm">
-                开始学习会话
+              <Button onClick={handleStartSession} disabled={!subjectInput.trim()}>
+                开始学习
               </Button>
             </div>
           </div>
