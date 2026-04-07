@@ -56,10 +56,10 @@ class Settings(BaseSettings):
             # Fix empty username in DATABASE_URL (Railway PostgreSQL issue)
             # Railway provides postgresql+asyncpg://:password@host/db
             # but it should be postgresql+asyncpg://postgres:password@host/db
-            if self.DATABASE_URL.startswith("postgresql+asyncpg://:@"):
+            if "postgresql+asyncpg://:" in self.DATABASE_URL:
                 return self.DATABASE_URL.replace(
-                    "postgresql+asyncpg://:@",
-                    "postgresql+asyncpg://postgres:@"
+                    "postgresql+asyncpg://:",
+                    "postgresql+asyncpg://postgres:"
                 )
             return self.DATABASE_URL
 
