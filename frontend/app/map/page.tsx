@@ -99,8 +99,10 @@ export default function MapPage() {
       await startSession(subjectInput);
       setShowSubjectDialog(false);
       setSubjectInput('');
-    } catch (error) {
-      console.error('Failed to start session:', error);
+    } catch (error: any) {
+      const detail = error?.response?.data?.detail || error?.message || '未知错误';
+      console.error('Failed to start session:', detail);
+      alert(`开始学习会话失败: ${detail}`);
     }
   };
 
