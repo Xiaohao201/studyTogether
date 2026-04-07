@@ -5,8 +5,9 @@ const nextConfig = {
   env: {
     // Production backend URL for Railway deployment
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app',
-    NEXT_PUBLIC_AMAP_KEY: process.env.NEXT_PUBLIC_AMAP_KEY || '',
-    NEXT_PUBLIC_AMAP_SECRET: process.env.NEXT_PUBLIC_AMAP_SECRET || '',
+    // AMap (高德地图) configuration - use valid keys for production
+    NEXT_PUBLIC_AMAP_KEY: process.env.NEXT_PUBLIC_AMAP_KEY || '8ae086b6aa1a363f43ab92e23f8e6a4d',
+    NEXT_PUBLIC_AMAP_SECRET: process.env.NEXT_PUBLIC_AMAP_SECRET || '06e6de0b22b9fa3b5afe7a033eee484e',
   },
   async rewrites() {
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app';
