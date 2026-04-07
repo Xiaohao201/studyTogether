@@ -216,6 +216,40 @@ async def run_migrations():
         }
 
 
+@app.post("/admin/enable-postgis")
+async def enable_postgis_extension():
+    """
+    Manually enable PostGIS extension on Railway PostgreSQL.
+
+    This endpoint tries to create the PostGIS extension if it doesn't exist.
+    Only works if Railway PostgreSQL image supports PostGIS.
+    """
+    from sqlalchemy import text
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # Try to enable PostGIS extension
+            await db.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
+            await db.commit()
+
+            # Verify PostGIS is enabled
+            version_query = text("SELECT PostGIS_Version()")
+            version = await db.execute(version_query)
+            postgis_version = version.scalar()
+
+            return {
+                "success": True,
+                "message": "PostGIS extension enabled successfully",
+                "postgis_version": postgis_version
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "hint": "Railway PostgreSQL might not support PostGIS. Consider using the decimal coordinates fallback instead."
+        }
+
+
 # Include routers
 from app.api import auth, users, locations, sessions
 
