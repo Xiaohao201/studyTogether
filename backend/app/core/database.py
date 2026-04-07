@@ -12,6 +12,12 @@ settings = get_settings()
 # Get DATABASE_URL (may be constructed from components)
 database_url = settings.get_database_url()
 
+# Debug: Print database URL (hide password for security)
+safe_url = database_url.split('@')[-1] if '@' in database_url else database_url
+print(f"[DEBUG] 🗄️  Database URL (host): ...@{safe_url}")
+print(f"[DEBUG] 📋 Full DATABASE_URL from settings: {settings.DATABASE_URL[:50] if settings.DATABASE_URL else 'None'}...")
+print(f"[DEBUG] 🔧 PGUSER: '{settings.PGUSER}', PGHOST: '{settings.PGHOST}', POSTGRES_HOST: '{settings.POSTGRES_HOST}'")
+
 # Create async engine
 engine = create_async_engine(
     database_url,
