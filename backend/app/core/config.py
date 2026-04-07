@@ -53,14 +53,7 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         """Get DATABASE_URL, constructing from components if needed."""
         if self.DATABASE_URL:
-            # Fix empty username in DATABASE_URL (Railway PostgreSQL issue)
-            # Railway provides postgresql+asyncpg://:password@host/db
-            # but it should be postgresql+asyncpg://postgres:password@host/db
-            if "postgresql+asyncpg://:" in self.DATABASE_URL:
-                return self.DATABASE_URL.replace(
-                    "postgresql+asyncpg://:",
-                    "postgresql+asyncpg://postgres:"
-                )
+            # Railway PostgreSQL uses empty username - use it as-is
             return self.DATABASE_URL
 
         # Construct from components
