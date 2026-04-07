@@ -1,6 +1,7 @@
 """FastAPI application entry point."""
 
 import logging
+import socketio
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -250,9 +251,23 @@ async def enable_postgis_extension():
 
 
 # Include routers
-from app.api import auth, users, locations, sessions
+from app.api import auth, users, locations, sessions, calls
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(locations.router, prefix="/api/locations", tags=["Locations"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Study Sessions"])
+app.include_router(calls.router, prefix="/api/calls", tags=["Calls"])
+
+# Setup Socket.io
+from app.socket import sio, connected_users
+from app.socket.call_handler import register_call_handlers
+
+# Register call handlers
+register_call_handlers()
+
+# Create Socket.io ASGI app
+socket_app = socketio.ASGIApp(sio, app)
+
+# Export socket_app for uvicorn to use
+__all__ = ["app", "socket_app"]

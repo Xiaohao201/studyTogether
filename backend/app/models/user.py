@@ -61,6 +61,8 @@ class User(Base):
     # Relationships
     locations = relationship("UserLocation", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("StudySession", back_populates="user", cascade="all, delete-orphan")
+    hosted_calls = relationship("CallRoom", back_populates="host", cascade="all, delete-orphan")
+    call_participations = relationship("CallParticipant", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

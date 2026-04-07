@@ -184,4 +184,30 @@ export const sessionsApi = {
   },
 };
 
+// Calls API
+export const callsApi = {
+  startCall: async (targetUserId: string, callType: 'voice' | 'video') => {
+    const response = await api.post('/api/calls/start', {
+      target_user_id: targetUserId,
+      call_type: callType,
+    });
+    return response.data;
+  },
+
+  getCallRoom: async (roomCode: string) => {
+    const response = await api.get(`/api/calls/${roomCode}`);
+    return response.data;
+  },
+
+  endCall: async (roomId: string) => {
+    const response = await api.post('/api/calls/end', { room_id: roomId });
+    return response.data;
+  },
+
+  getMyActiveCalls: async () => {
+    const response = await api.get('/api/calls/active/my-calls');
+    return response.data;
+  },
+};
+
 export default api;

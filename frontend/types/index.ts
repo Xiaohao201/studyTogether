@@ -124,3 +124,104 @@ export interface ProfileFormData {
   privacy_mode: PrivacyMode
   show_exact_to_friends: boolean
 }
+
+// Call Types
+export type CallType = 'voice' | 'video'
+export type CallStatus = 'initiated' | 'ongoing' | 'ended' | 'rejected'
+
+export interface CallRoom {
+  id: string
+  room_code: string
+  host_id: string
+  call_type: CallType
+  call_status: CallStatus
+  study_session_id?: string
+  started_at: string
+  ended_at?: string
+  duration_seconds?: number
+  participants: CallParticipant[]
+}
+
+export interface CallParticipant {
+  id: string
+  call_room_id: string
+  user_id: string
+  joined_at: string
+  left_at?: string
+  has_video: boolean
+  has_audio: boolean
+}
+
+export interface CallRoomCreate {
+  target_user_id: string
+  call_type: CallType
+}
+
+export interface CallRoomResponse extends CallRoom {}
+
+export interface CallEnd {
+  room_id: string
+}
+
+// WebRTC Signaling Types
+export interface RTCSessionDescriptionInit {
+  type: 'offer' | 'answer' | 'pranswer' | 'rollback'
+  sdp: string | null
+}
+
+export interface RTCIceCandidateInit {
+  candidate: string
+  sdpMid: string | null
+  sdpMLineIndex: number | null
+  usernameFragment: string | null
+}
+
+export interface CallOfferData {
+  targetUserId: string
+  roomCode: string
+  offer: RTCSessionDescriptionInit
+}
+
+export interface CallAnswerData {
+  callerId: string
+  roomCode: string
+  answer: RTCSessionDescriptionInit
+}
+
+export interface IceCandidateData {
+  targetUserId: string
+  candidate: RTCIceCandidateInit
+}
+
+export interface IncomingCallOfferData {
+  callerId: string
+  roomCode: string
+  offer: RTCSessionDescriptionInit
+}
+
+export interface CallAnsweredData {
+  calleeId: string
+  roomCode: string
+  answer: RTCSessionDescriptionInit
+}
+
+export interface IceCandidateReceivedData {
+  senderId: string
+  candidate: RTCIceCandidateInit
+}
+
+export interface CallRejectedData {
+  calleeId: string
+  roomCode: string
+}
+
+export interface CallEndedData {
+  roomCode: string
+  endedBy: string
+}
+
+export interface ParticipantMediaChangedData {
+  userId: string
+  hasAudio: boolean
+  hasVideo: boolean
+}

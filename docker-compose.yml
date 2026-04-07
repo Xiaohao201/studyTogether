@@ -18,8 +18,35 @@ services:
       timeout: 5s
       retries: 5
 
+  # TURN server for WebRTC NAT traversal
+  turn:
+    image: coturn/coturn:4.6.2
+    container_name: studytogether-turn
+    network_mode: "host"
+    environment:
+      - TURN_USERNAME=${TURN_USERNAME:-studytogether}
+      - TURN_PASSWORD=${TURN_PASSWORD:-turn-dev-password}
+      - TURN_REALM=studytogether
+      - TURN_PORT=3478
+      - TURN_TLS_PORT=5349
+    command: >
+      turnserver
+      --network-activity-timeout=300
+      --user=${TURN_USERNAME:-studytogether}:${TURN_PASSWORD:-turn-dev-password}
+      --realm=studytogether
+      --log-file=stdout
+      --no-cli
+      --no-tls
+      --no-dtls
+      --listening-port=3478
+      --fingerprint
+      --max-bps=3000000
+      --total-quota=300
+      --stale-nonce=600
+    restart: unless-stopped
+
   # Backend disabled - run locally instead:
-  # cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  # cd backend && uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
   # backend:
   #   build:
   #     context: ./backend
@@ -29,10 +56,13 @@ services:
   #     DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-studytogether}:${POSTGRES_PASSWORD:-studytogether_dev_password}@postgres:5432/${POSTGRES_DB:-studytogether}
   #     SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
   #     ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
-  #     REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+  #     REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_DAYS:-7}
   #     FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
   #     ENVIRONMENT: ${ENVIRONMENT:-development}
   #     DEBUG: "true"
+  #     TURN_SERVER_URL=turn:localhost:3478
+  #     TURN_USERNAME=${TURN_USERNAME:-studytogether}
+  #     TURN_CREDENTIAL=${TURN_PASSWORD:-turn-dev-password}
   #   ports:
   #     - "8000:8000"
   #   depends_on:
@@ -40,7 +70,7 @@ services:
   #       condition: service_healthy
   #   volumes:
   #     - ./backend:/app
-  #   command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  #   command: uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:

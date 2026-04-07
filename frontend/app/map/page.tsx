@@ -8,7 +8,9 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
-import { useAuthStore, useLocationStore, useSessionStore } from '../../store';
+import { useAuthStore, useLocationStore, useSessionStore, useCallStore } from '../../store';
+import { CallButton } from '../../components/call/CallButton';
+import { IncomingCallDialog } from '../../components/call/IncomingCallDialog';
 import type { NearbyUser } from '../../types';
 
 // Dynamically import StudyMap to prevent SSR issues with AMap
@@ -39,10 +41,12 @@ export default function MapPage() {
     endSession,
     fetchActiveSession,
   } = useSessionStore();
+  const { incomingCall, activeCall } = useCallStore();
 
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [subjectInput, setSubjectInput] = useState('');
+  const [showIncomingCallDialog, setShowIncomingCallDialog] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -71,6 +75,20 @@ export default function MapPage() {
       fetchActiveSession();
     }
   }, [isAuthenticated]);
+
+  // Show incoming call dialog when receiving a call
+  useEffect(() => {
+    if (incomingCall) {
+      setShowIncomingCallDialog(true);
+    }
+  }, [incomingCall]);
+
+  // Redirect to call room when call is active
+  useEffect(() => {
+    if (activeCall) {
+      router.push(`/call/${activeCall.room_code}`);
+    }
+  }, [activeCall, router]);
 
   // Handle starting a session
   const handleStartSession = async () => {
@@ -164,7 +182,7 @@ export default function MapPage() {
                     onClick={() => setSelectedUser(nearbyUser)}
                   >
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           {nearbyUser.username}
                         </h3>
@@ -173,8 +191,16 @@ export default function MapPage() {
                             {nearbyUser.subject}
                           </p>
                         )}
+                        <div className="mt-2">
+                          <CallButton
+                            userId={nearbyUser.id}
+                            username={nearbyUser.username}
+                            variant="icon"
+                            onCallInitiated={() => {}}
+                          />
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right ml-3">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {nearbyUser.distance_meters < 1000
                             ? `${Math.round(nearbyUser.distance_meters)}m`
@@ -274,6 +300,13 @@ export default function MapPage() {
           </div>
         </div>
       )}
+
+      {/* Incoming Call Dialog */}
+      <IncomingCallDialog
+        open={showIncomingCallDialog}
+        onOpenChange={setShowIncomingCallDialog}
+        incomingCall={incomingCall}
+      />
     </div>
   );
 }
