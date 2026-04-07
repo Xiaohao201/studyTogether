@@ -68,11 +68,15 @@ logger.info("[DEBUG] 🔗 This deployment includes explicit OPTIONS handler")
 logger.info("=" * 60)
 
 # Configure CORS - MUST be added before other middleware
-# TEMPORARY: Allow all origins to fix Railway deployment
-# TODO: Restrict to specific domains in production
+# Allow both frontend and backend Railway domains
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins temporarily
+    allow_origins=[
+        "https://studytogether-production-86d1.up.railway.app",  # Frontend
+        "https://studytogether-production.up.railway.app",        # Backend
+        "http://localhost:3000",                                   # Local development
+        "http://localhost:8000",                                   # Local development
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
