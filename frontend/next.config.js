@@ -18,10 +18,25 @@ const nextConfig = {
       },
     ];
   },
+  // Disable caching for API routes to prevent CORS issues
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 // Force rebuild to pickup Railway environment variables
-// Build timestamp: 2025-04-06-16
+// Build timestamp: 2025-04-07-11-15
+// CORS fix deployment - Allow all origins
 // Production backend: https://studytogether-production.up.railway.app
 
 module.exports = nextConfig;
