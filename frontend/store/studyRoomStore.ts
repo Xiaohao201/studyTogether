@@ -52,11 +52,11 @@ interface StudyRoomState {
 
   // Actions - Chat
   fetchMessages: (roomCode: string) => Promise<void>
-  sendMessage: (content: string) => void
+  sendMessage: (content: string) => Promise<void>
   handleIncomingMessage: (data: StudyRoomMessageData) => void
 
   // Actions - Socket event handlers
-  handleInviteAccepted: (data: StudyInviteAccepted) => void
+  handleInviteAccepted: (data: StudyInviteAccepted) => Promise<void>
   handleInviteRejected: () => void
   handleParticipantLeft: (data: StudyRoomLeft) => void
   handleRoomEnded: (data: StudyRoomEnded) => void
