@@ -4,7 +4,7 @@ import uuid
 import random
 from datetime import datetime, timedelta
 from typing import Optional, List
-from sqlalchemy import select, delete, func, text as sql_text
+from sqlalchemy import select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.location import UserLocation
@@ -20,32 +20,6 @@ class LocationService:
     def __init__(self, db: AsyncSession):
         """Initialize location service with database session."""
         self.db = db
-        self._postgis_enabled: Optional[bool] = None
-
-    async def _is_postgis_enabled(self) -> bool:
-        """
-        Check if PostGIS extension is available in the database.
-
-        Caches the result for performance.
-
-        Returns:
-            True if PostGIS is available, False otherwise
-        """
-        if self._postgis_enabled is not None:
-            return self._postgis_enabled
-
-        try:
-            # Try to query PostGIS version
-            result = await self.db.execute(
-                sql_text("SELECT PostGIS_Version()")
-            )
-            result.fetchone()  # Execute query
-            self._postgis_enabled = True
-        except Exception:
-            # PostGIS not available
-            self._postgis_enabled = False
-
-        return self._postgis_enabled
 
     def generate_fuzzy_location(
         self,
@@ -126,19 +100,6 @@ class LocationService:
             district=district,
             country_code=country_code,
         )
-
-        # Only create PostGIS geography objects if extension is available
-        if await self._is_postgis_enabled():
-            # Create PostGIS point objects using WKT (Well-Known Text)
-            # Format: POINT(longitude latitude) - note the order!
-            location.coordinates = sql_text(f"SRID=4326;POINT({longitude} {latitude})")
-            location.fuzzy_coordinates = sql_text(f"SRID=4326;POINT({fuzzy_lng} {fuzzy_lat})")
-        else:
-            # PostGIS not available - leave geography fields as NULL
-            # The decimal degree fields (latitude, longitude, fuzzy_latitude, fuzzy_longitude)
-            # will be used for distance calculations instead
-            location.coordinates = None
-            location.fuzzy_coordinates = None
 
         self.db.add(location)
         await self.db.commit()
