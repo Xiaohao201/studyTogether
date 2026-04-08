@@ -266,8 +266,18 @@ from app.socket.call_handler import register_call_handlers
 # Register call handlers
 register_call_handlers()
 
-# Create Socket.io ASGI app
-socket_app = socketio.ASGIApp(sio, app)
+# Create Socket.io ASGI app, wrapped with CORS at the outermost layer
+_asgi_app = socketio.ASGIApp(sio, app)
+
+socket_app = CORSMiddleware(
+    _asgi_app,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
+)
 
 # Export socket_app for uvicorn to use
 __all__ = ["app", "socket_app"]
