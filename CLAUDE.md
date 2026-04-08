@@ -4,19 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**StudyTogether** is a real-time global learning companion platform that connects students worldwide based on their learning activities and geographic location.
+**StudyTogether** — real-time global learning companion platform. Connects students by learning activity and geographic location, with voice/video calling via WebRTC.
 
 **Tech Stack:**
-- **Frontend**: Next.js 14 (App Router) + TypeScript 5 + Tailwind CSS + Mapbox GL
-- **Backend**: FastAPI (Python 3.11+) + Socket.io + SQLAlchemy 2.0
-- **Database**: PostgreSQL 15 + PostGIS 3.3 (geospatial queries)
-- **DevOps**: Docker Compose for local development
-
-**Key Features:**
-- Real-time location updates via WebSocket
-- Privacy-first design (fuzzy location ~1km accuracy by default)
-- Nearby user matching using PostGIS spatial queries
-- JWT authentication with access/refresh tokens
+- **Frontend**: Next.js 14 (App Router) + TypeScript 5 + Tailwind CSS + AMap (高德地图) + Zustand
+- **Backend**: FastAPI (Python 3.11+) + Socket.io + SQLAlchemy 2.0 (async)
+- **Database**: PostgreSQL 15 + PostGIS 3.3 (optional — decimal coordinate fallback for Railway)
+- **Real-time**: Socket.io for signaling + WebRTC for voice/video calls
+- **DevOps**: Docker Compose (PostgreSQL + coturn TURN server; backend runs locally)
 
 ---
 
@@ -25,121 +20,91 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Environment Setup
 
 ```bash
-# Start all services (PostgreSQL + Backend)
+# Start PostgreSQL + TURN server (backend runs locally, not containerized)
 docker-compose up -d
 
-# Stop all services
+# Stop services
 docker-compose down
-
-# View logs
-docker-compose logs -f backend
 ```
 
-### Frontend Development
+### Frontend
 
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start development server (http://localhost:3000)
-npm run dev
-
-# Type checking
-npm run type-check
-
-# Build for production
-npm run build
-
-# Start production server
-npm run start
-
-# Lint code
-npm run lint
+npm run dev              # http://localhost:3000
+npm run build            # Production build
+npm run type-check       # tsc --noEmit
+npm run lint             # ESLint
+npm run test             # Playwright E2E tests
+npm run test:headed      # Playwright with browser UI
+npm run test:debug       # Playwright debug mode
 ```
 
-### Backend Development
+### Backend
 
 ```bash
 cd backend
-
-# Install dependencies (using pip)
 pip install -r requirements.txt
 
-# Run development server (http://localhost:8000)
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# IMPORTANT: Use socket_app, not app — Socket.io won't work otherwise
+uvicorn app.main:socket_app --host 0.0.0.0 --port 8000 --reload
 
-# Run tests
-pytest
-
-# Run specific test file
-pytest tests/test_auth.py
-
-# Run tests with coverage
-pytest --cov=app tests/
-
-# Create database migration
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
+pytest                                    # All tests
+pytest tests/test_auth.py                 # Single file
+pytest --cov=app tests/                   # With coverage
+alembic revision --autogenerate -m "desc" # Create migration
+alembic upgrade head                      # Apply migrations
 ```
 
-### Database Operations
+### Database
 
 ```bash
-# Connect to PostgreSQL
 docker exec -it studytogether-db psql -U studytogether -d studytogether
-
-# Enable PostGIS extension (run once)
-CREATE EXTENSION IF NOT EXISTS postgis;
-
-# Verify PostGIS is installed
-SELECT PostGIS_Version();
 ```
 
 ---
 
 ## Architecture
 
-### High-Level Data Flow
+### Data Flow
 
 ```
-Frontend (Next.js) ←→ Backend (FastAPI) ←→ PostgreSQL + PostGIS
-     ↓                           ↓
-Socket.io Client        Socket.io Server + SQLAlchemy ORM
+Browser (AMap + GPS) ──→ Socket.io ──→ FastAPI ──→ PostgreSQL
+                            ↓
+                     WebRTC signaling (call offer/answer/ICE)
+                            ↓
+                  Browser ←──P2P──→ Browser (voice/video)
 ```
 
-**Real-Time Flow:**
-1. Client browser obtains GPS coordinates
-2. Client emits `location-update` via Socket.io
-3. Backend validates and stores in database (with fuzzy location)
-4. Backend queries nearby users using PostGIS `ST_DWithin()`
-5. Server emits `nearby-users` to affected clients
-6. Client updates map markers
+**Real-time location flow:**
+1. Client gets GPS → emits `location-update` via Socket.io
+2. Backend validates, stores with fuzzy jitter, queries nearby users (Haversine or PostGIS)
+3. Server emits `nearby-users` → client updates map markers
+
+**WebRTC call flow:**
+1. Caller creates room via REST (`POST /api/calls/start`)
+2. Caller creates RTCPeerConnection, SDP offer → sends via Socket.io `call_offer`
+3. Callee receives `incoming-call-offer`, creates answer → `call_answer`
+4. Both exchange ICE candidates via Socket.io
+5. P2P connection established; TURN server (coturn) for NAT traversal
 
 ### Key Architectural Patterns
 
-**1. Privacy Tiers**
-```typescript
-// Privacy modes control location visibility
-enum PrivacyMode {
-  Exact = 'EXACT',           // Friends only (precise location)
-  Fuzzy = 'FUZZY',           // Public (~1km accuracy with jitter)
-  Invisible = 'INVISIBLE'    // Hidden from everyone
-}
-```
+**Privacy tiers** — `privacy_mode` controls location visibility:
+- `exact` — friends only (precise location)
+- `fuzzy` — public (~500m jitter added to coordinates)
+- `invisible` — hidden from everyone
 
-**2. Type System**
-- **Frontend**: Centralized types in `frontend/types/index.ts` (126 lines)
-- **Backend**: Pydantic schemas in `backend/app/schemas/` (planned)
-- **Shared**: Both use similar structure for API contracts
+**Coordinates** — location model stores both exact (`latitude`/`longitude`) and fuzzy (`fuzzy_latitude`/`fuzzy_longitude`) as `Numeric(10,8)` / `Numeric(11,8)`. PostGIS `GEOGRAPHY(POINT)` is optional — the service layer uses Haversine as fallback when PostGIS is unavailable (e.g., Railway PostgreSQL).
 
-**3. API Response Format**
+**State management** — Zustand stores in `frontend/store/`:
+- `authStore` — JWT tokens, user profile (persisted to localStorage)
+- `locationStore` — GPS tracking, nearby users
+- `sessionStore` — active study session
+- `callStore` — WebRTC peer connection, media streams, call signaling
+
+**API response format:**
 ```typescript
 interface ApiResponse<T> {
   success: boolean
@@ -149,282 +114,132 @@ interface ApiResponse<T> {
 }
 ```
 
-**4. Geospatial Queries**
-- Database stores both `coordinates` (exact, private) and `fuzzy_coordinates` (public)
-- PostGIS `GEOGRAPHY(POINT, 4326)` type for WGS84 coordinates
-- GiST index on `fuzzy_coordinates` for fast proximity queries
-- Distance calculated via `ST_DistanceSphere()` (returns meters)
-
-### Project Structure
+### Backend Module Layout
 
 ```
-/
-├── frontend/                 # Next.js 14 application
-│   ├── app/                 # App Router pages
-│   ├── components/          # React components (shadcn/ui)
-│   ├── lib/                 # Utilities (cn helper, API client)
-│   ├── types/               # TypeScript definitions
-│   └── package.json
-│
-├── backend/                 # FastAPI application
-│   ├── app/
-│   │   ├── main.py          # FastAPI entry point
-│   │   ├── models/          # SQLAlchemy ORM models
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   ├── api/             # API route handlers
-│   │   ├── services/        # Business logic
-│   │   └── socket/          # Socket.io event handlers
-│   ├── tests/               # pytest suite
-│   ├── alembic/             # Database migrations
-│   └── requirements.txt
-│
-├── codemaps/                # Architecture documentation
-│   ├── architecture.md      # System overview
-│   ├── frontend.md          # Frontend structure
-│   ├── backend.md           # Backend structure
-│   └── data.md              # Database schema
-│
-├── docker-compose.yml       # Dev environment orchestration
-└── research.md              # Feasibility study (562 lines)
+backend/app/
+├── main.py              # FastAPI app + Socket.io ASGI mount + CORS
+├── dependencies.py      # get_current_user, get_db FastAPI dependencies
+├── core/
+│   ├── config.py        # Pydantic Settings (env vars)
+│   ├── database.py      # AsyncSession engine
+│   └── security.py      # JWT create/verify
+├── models/              # SQLAlchemy ORM: user, location, session, call
+├── schemas/             # Pydantic request/response: auth, user, location, session, call
+├── api/                 # Route handlers: auth, users, locations, sessions, calls
+├── services/            # Business logic: auth, location (Haversine), session, call
+└── socket/
+    ├── __init__.py      # Socket.io server + auth middleware + connected_users dict
+    └── call_handler.py  # WebRTC signaling event handlers
 ```
 
----
+### Frontend Layout
 
-## Critical Implementation Details
-
-### Database Schema
-
-**Three Core Tables:**
-
-1. **`users`** - Authentication, profile, privacy settings
-   - `id` (UUID, PK), `username`, `email`, `hashed_password`
-   - `status` ENUM: 'studying' | 'break' | 'offline'
-   - `privacy_mode` ENUM: 'exact' | 'fuzzy' | 'invisible'
-   - `study_duration_minutes` (total accumulated time)
-
-2. **`user_locations`** - Location history with PostGIS
-   - `coordinates` GEOGRAPHY(POINT) - exact location (private)
-   - `fuzzy_coordinates` GEOGRAPHY(POINT) - jittered location (public)
-   - `city`, `district` - geocoded results (cached)
-   - **Retention**: 30-day auto-cleanup (GDPR compliance)
-
-3. **`study_sessions`** - Study session tracking
-   - `subject`, `started_at`, `ended_at`, `duration_minutes`
-   - `participants_count` - for future group sessions
-
-**Indexes:**
-- B-tree on `users.email`, `users.username`, `users.status`
-- GiST on `user_locations.fuzzy_coordinates` (critical for nearby queries)
-
-### Location Fuzzying Algorithm
-
-```python
-# Backend service: generate_fuzzy_location()
-# Add random jitter (~500m radius) to coordinates
-lat_offset = random.uniform(-0.005, 0.005)  # ~500m
-lng_offset = random.uniform(-0.005, 0.005)
-return (lat + lat_offset, lng + lng_offset)
 ```
-
-### Nearby Users Query Pattern
-
-```sql
--- Use ST_DWithin (index-aware) instead of ST_DistanceSphere
-SELECT u.*, ul.city,
-       ST_DistanceSphere(
-         ul.fuzzy_coordinates,
-         ST_MakePoint(:lng, :lat)::geography
-       ) as distance_meters
-FROM users u
-JOIN user_locations ul ON u.id = ul.user_id
-WHERE u.privacy_mode IN ('fuzzy', 'exact')
-  AND ST_DWithin(
-    ul.fuzzy_coordinates::geography,
-    ST_MakePoint(:lng, :lat)::geography,
-    :radius_meters  -- e.g., 5000 meters
-  )
-ORDER BY distance_meters ASC
-LIMIT 20;
-```
-
-### Authentication Flow
-
-1. User submits credentials to `POST /api/auth/login`
-2. Backend validates using `passlib` bcrypt
-3. Returns JWT access token (15min expiry) + refresh token (7 days)
-4. Frontend stores tokens, includes in `Authorization: Bearer <token>` header
-5. Protected routes use `get_current_user` dependency to verify JWT
-
-**JWT Configuration (backend):**
-```python
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+frontend/
+├── app/
+│   ├── map/page.tsx            # Main map view (AMap + nearby users)
+│   └── call/[roomCode]/page.tsx # Active call room (WebRTC video/audio)
+├── components/
+│   ├── call/                   # CallButton, CallControls, IncomingCallDialog
+│   ├── StudyMap.tsx            # AMap integration
+│   └── ui/                     # shadcn/ui (button, dialog, etc.)
+├── lib/
+│   ├── api.ts                  # Axios client with JWT interceptor + refresh
+│   ├── callSocket.ts           # Socket.io client for call signaling
+│   ├── webrtc.ts               # WebRTC peer connection manager
+│   └── storage.ts              # LocalStorage utilities
+├── store/                      # Zustand stores (auth, location, session, call)
+└── types/index.ts              # All TypeScript type definitions
 ```
 
 ---
 
-## Environment Configuration
+## Database Schema
 
-Copy `.env.example` to `.env` and configure:
+**`users`** — `id` (UUID PK), `username`, `email`, `hashed_password`, `subject`, `status` (studying/break/offline), `privacy_mode` (exact/fuzzy/invisible), `study_duration_minutes`, `show_exact_to_friends`, timestamps
+
+**`user_locations`** — `id` (UUID PK), `user_id` (FK), `latitude`/`longitude` (exact, private), `fuzzy_latitude`/`fuzzy_longitude` (public, ~500m jitter), `city`, `district`, `country_code`, `created_at`. 30-day retention (GDPR).
+
+**`study_sessions`** — `id` (UUID PK), `user_id` (FK), `subject`, `started_at`, `ended_at`, `duration_minutes`, `participants_count`
+
+**`call_rooms`** — `id` (UUID PK), `room_code` (unique), `host_id` (FK), `call_type` (voice/video), `call_status` (initiated/ongoing/ended/rejected), `study_session_id` (FK nullable), `duration_seconds`
+
+**`call_participants`** — `id` (UUID PK), `call_room_id` (FK), `user_id` (FK), `joined_at`, `left_at`, `has_video`, `has_audio`
+
+---
+
+## API Endpoints
+
+| Prefix | Router | Key Routes |
+|--------|--------|------------|
+| `/api/auth` | auth.py | POST `/register`, `/login`; GET/PUT `/me` |
+| `/api/users` | users.py | GET `/me`, `/nearby` |
+| `/api/locations` | locations.py | POST `/`, GET `/me`, `/nearby`, `/stats`; DELETE `/` |
+| `/api/sessions` | sessions.py | POST `/`, PUT `/{id}/end`, GET `/{id}`, `/active` |
+| `/api/calls` | calls.py | POST `/start`, `/end`; GET `/{roomCode}`, `/active/my-calls` |
+
+---
+
+## Environment Variables
 
 ```bash
 # Database
-DATABASE_URL=postgresql://studytogether:password@localhost:5432/studytogether
-POSTGRES_USER=studytogether
-POSTGRES_PASSWORD=studytogether_dev_password
-POSTGRES_DB=studytogether
+DATABASE_URL=postgresql+asyncpg://studytogether:password@localhost:5432/studytogether
 
-# JWT (CHANGE IN PRODUCTION)
-SECRET_KEY=your-super-secret-key-change-this-in-production
+# JWT
+SECRET_KEY=your-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# Frontend URLs
-NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_public_token
+# Frontend (set in frontend/.env.local)
+NEXT_PUBLIC_AMAP_KEY=your_amap_key
+NEXT_PUBLIC_AMAP_SECRET=your_amap_secret
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:3000
 
-# Environment
-ENVIRONMENT=development
+# WebRTC TURN server
+TURN_SERVER_URL=turn:localhost:3478
+TURN_USERNAME=studytogether
+TURN_PASSWORD=turn-dev-password
 ```
-
-**Important:** Never commit `.env` file (already in `.gitignore`).
-
----
-
-## TypeScript Path Aliases
-
-Frontend uses path aliases defined in `tsconfig.json`:
-
-```typescript
-import { Button } from "@/components/ui/button"
-import { User } from "@/types"
-import { cn } from "@/lib/utils"
-```
-
-Resolved paths:
-- `@/*` → `./`
-- `@/components/*` → `./components/*`
-- `@/lib/*` → `./lib/*`
-- `@/types/*` → `./types/*`
-
----
-
-## Testing Strategy
-
-**Backend (pytest):**
-- Unit tests for services, utilities
-- Integration tests for API endpoints
-- Async test support via `pytest-asyncio`
-- Test fixtures in `tests/conftest.py`
-
-**Frontend (planned):**
-- Component tests with React Testing Library
-- E2E tests with Playwright
-- Type checking via `npm run type-check`
-
-**Coverage Goal:** 80%+ (enforced by TDD workflow agent)
-
----
-
-## Code Style Guidelines
-
-**Python Backend:**
-- Line length: 100 characters (Black config)
-- Use `isort` for import sorting
-- Type hints required for all functions
-- Pydantic models for validation
-
-**TypeScript Frontend:**
-- Strict mode enabled
-- No `any` types (use proper types from `@/types`)
-- Use `cn()` utility for conditional classes
-- Prefer function components with hooks
 
 ---
 
 ## Common Pitfalls
 
-**1. PostGIS Coordinates Order**
-- ❌ Wrong: `ST_MakePoint(lat, lng)`
-- ✅ Correct: `ST_MakePoint(lng, lat)` - longitude FIRST
+1. **Uvicorn target must be `socket_app`** — `uvicorn app.main:socket_app` (not `app.main:app`). The `socket_app` wraps the FastAPI app with Socket.io ASGI + CORS. Using `app` directly means Socket.io won't work.
 
-**2. Privacy Mode Filtering**
-- Always filter by `privacy_mode` when querying nearby users
-- Never expose exact location unless user is friend AND `show_exact_to_friends=true`
+2. **PostGIS coordinates order** — `ST_MakePoint(lng, lat)` — longitude first. This is a consistent source of bugs.
 
-**3. JWT Token Expiry**
-- Access tokens expire in 15 minutes
-- Frontend must implement refresh token logic
-- Use `axios` interceptors for automatic token refresh
+3. **Privacy mode filtering** — always filter by `privacy_mode` when querying nearby users. Never expose exact coordinates unless `show_exact_to_friends=true` AND the viewer is a friend.
 
-**4. Database Connection**
-- Use async SQLAlchemy sessions: `AsyncSession`
-- Always commit or rollback transactions
-- Use `depends(get_db)` for route dependencies
+4. **CORS double-wrap** — CORS is applied both on the FastAPI `app` (for REST) and on the outer `socket_app` (for Socket.io). Changes to CORS must update both in `main.py`.
 
-**5. Socket.io Event Naming**
-- Client → Server: `location-update`, `status-update`
-- Server → Client: `nearby-users`, `user-entered`, `user-left`
-- Use kebab-case for consistency
+5. **Location model uses decimal columns** — not PostGIS geometry. The `coordinates`/`fuzzy_coordinates` GEOGRAPHY columns referenced in older docs have been replaced with `latitude`/`longitude`/`fuzzy_latitude`/`fuzzy_longitude` Numeric columns. The Haversine formula is used for distance calculations as a PostGIS fallback.
+
+6. **Socket.io event naming** — kebab-case: `call_offer`, `call_answer`, `ice_candidate`, `incoming-call-offer`, `call-answered`, `call-ended`.
 
 ---
 
-## Deployment Considerations
+## TypeScript Path Aliases
 
-**Current:** Docker Compose for local development
-**Planned Production:**
-- Frontend: Vercel (Next.js optimized)
-- Backend: Railway/Fly.io (FastAPI support)
-- Database: Neon Postgres (managed, with PostGIS)
-- Real-time: May switch to Pusher if Socket.io scaling issues arise
-
----
-
-## Key Dependencies
-
-**Frontend:**
-- `next` (14.2.15) - React framework with App Router
-- `socket.io-client` (4.8.1) - WebSocket client
-- `mapbox-gl` (3.9.2) - Interactive maps
-- `zustand` (4.5.5) - State management (planned use)
-- `zod` (3.23.8) - Schema validation
-- `@radix-ui/*` - Accessible UI primitives (shadcn/ui)
-
-**Backend:**
-- `fastapi` (0.115.6) - Async web framework
-- `python-socketio` (5.11.4) - WebSocket server
-- `sqlalchemy` (2.0.36) - Async ORM
-- `geoalchemy2` (0.15.2) - PostGIS integration
-- `pydantic` (2.10.4) - Data validation
-- `python-jose` (3.3.0) - JWT handling
-- `passlib` (1.7.4) - Password hashing (bcrypt)
+```typescript
+import { Button } from "@/components/ui/button"   // ./components/ui/button
+import { useAuthStore } from "@/store/authStore"    // ./store/authStore
+import { User } from "@/types"                      // ./types/index.ts
+import { cn } from "@/lib/utils"                    // ./lib/utils.ts
+```
 
 ---
 
-## Documentation
+## Testing
 
-- **Architecture Overview**: `codemaps/architecture.md`
-- **Frontend Structure**: `codemaps/frontend.md`
-- **Backend Structure**: `codemaps/backend.md`
-- **Database Schema**: `codemaps/data.md`
-- **Research Report**: `research.md` (market analysis, feasibility study)
+**Backend (pytest):** `tests/conftest.py` provides async test fixtures. Tests use `pytest-asyncio`.
 
----
+**Frontend (Playwright):** E2E tests in `frontend/tests/e2e/` using Page Object Model. Configured for Chromium, single worker.
 
-## GDPR Compliance
-
-**Data Minimization:**
-- Only store location data for 30 days
-- Automatic cleanup via cron job or Python APScheduler
-
-**User Rights:**
-- Right to erasure: `DELETE FROM users WHERE id = :user_id`
-- Right to export: SQL query to aggregate all user data
-- Right to rectification: Update via `PUT /api/users/me`
-
-**Default Privacy:**
-- Fuzzy location by default (~1km accuracy)
-- Users must explicitly opt-in to exact location sharing
+```bash
+# Frontend E2E (first time)
+cd frontend && npm run test:install   # Install Playwright browsers
+npm run test                          # Run tests
+```

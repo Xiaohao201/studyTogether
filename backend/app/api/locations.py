@@ -93,6 +93,7 @@ async def delete_location(
 @router.get("/nearby", response_model=list[NearbyUserResponse])
 async def get_nearby_users(
     db: DBSession,
+    current_user: CurrentUser,
     latitude: float = Query(..., ge=-90, le=90, description="Center point latitude"),
     longitude: float = Query(..., ge=-180, le=180, description="Center point longitude"),
     radius_km: float = Query(default=5.0, ge=0.1, le=50.0, description="Search radius in kilometers"),
@@ -105,17 +106,17 @@ async def get_nearby_users(
     - **radius_km**: Search radius (0.1 to 50 km, default 5 km)
 
     Returns users sorted by distance (nearest first).
+    Excludes the requesting user from results.
     Only includes users with privacy_mode='fuzzy' or 'exact'.
     Only includes users with status='studying'.
     """
     location_service = LocationService(db)
 
-    # Find nearby users (no user filter - public endpoint)
     nearby = await location_service.find_nearby_users(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
-        user_id=None,  # Don't exclude any user
+        user_id=str(current_user.id),
         privacy_filter=['fuzzy', 'exact']
     )
 

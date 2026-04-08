@@ -69,10 +69,11 @@ class LocationService:
         country_code: Optional[str] = None
     ) -> UserLocation:
         """
-        Create a new location record for user.
+        Create or update the user's current location.
 
-        Generates fuzzy location and optionally creates PostGIS point objects
-        if PostGIS extension is available.
+        If a recent location record exists (within the last 60 seconds),
+        it is updated in place. Otherwise a new record is created.
+        This prevents the user_locations table from growing on every GPS tick.
 
         Args:
             user_id: User UUID
@@ -83,12 +84,42 @@ class LocationService:
             country_code: ISO 3166-1 alpha-2 country code
 
         Returns:
-            Created UserLocation object
+            Created or updated UserLocation object
         """
+        from datetime import timedelta
+
+        # Check for a very recent location record to update instead of inserting
+        recent_cutoff = datetime.utcnow() - timedelta(seconds=60)
+        existing_query = (
+            select(UserLocation)
+            .where(UserLocation.user_id == uuid.UUID(user_id))
+            .where(UserLocation.created_at >= recent_cutoff)
+            .order_by(UserLocation.created_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(existing_query)
+        existing = result.scalar_one_or_none()
+
         # Generate fuzzy location
         fuzzy_lat, fuzzy_lng = self.generate_fuzzy_location(latitude, longitude)
 
-        # Create location record with decimal degree coordinates
+        if existing:
+            # Update existing record in place
+            existing.latitude = latitude
+            existing.longitude = longitude
+            existing.fuzzy_latitude = fuzzy_lat
+            existing.fuzzy_longitude = fuzzy_lng
+            if city is not None:
+                existing.city = city
+            if district is not None:
+                existing.district = district
+            if country_code is not None:
+                existing.country_code = country_code
+            await self.db.commit()
+            await self.db.refresh(existing)
+            return existing
+
+        # No recent record — create a new one
         location = UserLocation(
             id=uuid.uuid4(),
             user_id=uuid.UUID(user_id),
@@ -119,14 +150,14 @@ class LocationService:
         Find nearby users using spherical distance calculation.
 
         Uses Haversine formula (via spherical law of cosines) for distance calculation.
-        Works without PostGIS extension on Railway PostgreSQL.
+        Only considers each user's most recent location to avoid duplicates.
 
         Args:
             latitude: Center point latitude
             longitude: Center point longitude
             radius_km: Search radius in kilometers
             user_id: Exclude this user ID from results (optional)
-            privacy_filter: List of privacy modes to include (default: ['fuzzy'])
+            privacy_filter: List of privacy modes to include (default: ['fuzzy', 'exact'])
 
         Returns:
             List of nearby users with distance in meters
@@ -142,6 +173,16 @@ class LocationService:
         # Earth radius in kilometers
         earth_radius_km = 6371.0
 
+        # Subquery: get the latest location ID per user
+        latest_location_subq = (
+            select(
+                UserLocation.user_id,
+                func.max(UserLocation.created_at).label('max_created')
+            )
+            .group_by(UserLocation.user_id)
+            .subquery()
+        )
+
         # Convert coordinates to radians for distance calculation
         center_lat_rad = sql_func.radians(latitude)
         center_lng_rad = sql_func.radians(longitude)
@@ -149,7 +190,6 @@ class LocationService:
         user_lng_rad = sql_func.radians(UserLocation.fuzzy_longitude)
 
         # Calculate distance using spherical law of cosines (Haversine-like formula)
-        # This gives distance in kilometers
         distance_km_expr = sql_func.acos(
             sql_func.sin(center_lat_rad) * sql_func.sin(user_lat_rad) +
             sql_func.cos(center_lat_rad) * sql_func.cos(user_lat_rad) *
@@ -159,7 +199,7 @@ class LocationService:
         # Convert to meters
         distance_meters_expr = distance_km_expr * 1000
 
-        # Build query with distance calculation
+        # Build query with distance calculation, joined to latest location only
         query = (
             select(
                 User,
@@ -167,9 +207,14 @@ class LocationService:
                 distance_meters_expr.label('distance_meters')
             )
             .join(UserLocation, User.id == UserLocation.user_id)
+            .join(
+                latest_location_subq,
+                (UserLocation.user_id == latest_location_subq.c.user_id) &
+                (UserLocation.created_at == latest_location_subq.c.max_created)
+            )
             .where(User.privacy_mode.in_(privacy_filter))
-            .where(distance_meters_expr <= radius_meters)  # Filter by distance
-            .where(User.status == 'studying')  # Only active learners
+            .where(distance_meters_expr <= radius_meters)
+            .where(User.status == 'studying')
             .order_by('distance_meters')
             .limit(100)
         )
