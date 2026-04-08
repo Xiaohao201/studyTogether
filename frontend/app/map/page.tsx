@@ -4,13 +4,14 @@
 // Force dynamic rendering to prevent SSR prerendering
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
 import { useAuthStore, useLocationStore, useSessionStore, useCallStore } from '../../store';
 import { CallButton } from '../../components/call/CallButton';
 import { IncomingCallDialog } from '../../components/call/IncomingCallDialog';
+import { getCallSocket } from '../../lib/callSocket';
 import type { NearbyUser } from '../../types';
 
 // Dynamically import StudyMap to prevent SSR issues with AMap
@@ -54,6 +55,51 @@ export default function MapPage() {
       router.push('/login');
     }
   }, [isAuthenticated, router]);
+
+  // Connect call socket and register event handlers on mount
+  const socketInitialized = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || socketInitialized.current) return;
+
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+
+    const callSocket = getCallSocket();
+    callSocket.connect(token);
+
+    callSocket.on({
+      onIncomingCallOffer: (data) => {
+        useCallStore.getState().setIncomingCall({
+          callerId: data.callerId,
+          roomCode: data.roomCode,
+          callType: 'voice', // default; answerCall fetches real type from API
+          offer: data,
+        });
+      },
+      onCallAnswered: (data) => {
+        useCallStore.getState().handleCallAnswered(data);
+      },
+      onIceCandidate: (data) => {
+        useCallStore.getState().handleIceCandidate(data);
+      },
+      onCallEnded: (data) => {
+        useCallStore.getState().handleCallEnded(data);
+      },
+      onCallRejected: (data) => {
+        useCallStore.getState().handleCallRejected(data);
+      },
+      onCallUserUnavailable: (data) => {
+        useCallStore.getState().handleUserUnavailable(data);
+      },
+    });
+
+    socketInitialized.current = true;
+
+    return () => {
+      // Do NOT disconnect here — the call room page reuses the same singleton.
+      // Cleanup is handled by callStore.cleanup() or explicit logout.
+    };
+  }, [isAuthenticated]);
 
   // Start location tracking when component mounts
   useEffect(() => {

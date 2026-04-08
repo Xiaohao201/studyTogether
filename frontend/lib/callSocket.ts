@@ -117,10 +117,24 @@ class CallSocketManager {
   }
 
   /**
-   * Register event callbacks.
+   * Register event callbacks (merges with existing).
    */
   on(callbacks: CallSocketCallbacks): void {
     this.callbacks = { ...this.callbacks, ...callbacks }
+  }
+
+  /**
+   * Replace all event callbacks.
+   */
+  replaceCallbacks(callbacks: CallSocketCallbacks): void {
+    this.callbacks = { ...callbacks }
+  }
+
+  /**
+   * Clear all event callbacks.
+   */
+  clearCallbacks(): void {
+    this.callbacks = {}
   }
 
   /**

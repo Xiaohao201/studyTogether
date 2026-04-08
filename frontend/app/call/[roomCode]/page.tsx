@@ -46,8 +46,8 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
     const callSocket = getCallSocket()
     callSocket.connect(token)
 
-    // Register call event handlers
-    callSocket.on({
+    // Register call event handlers (replace map page handlers)
+    callSocket.replaceCallbacks({
       onCallAnswered: (data) => {
         useCallStore.getState().handleCallAnswered(data)
       },

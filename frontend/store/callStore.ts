@@ -22,7 +22,7 @@ interface IncomingCall {
   callerUsername?: string
   roomCode: string
   callType: CallType
-  offer: RTCSessionDescriptionInit
+  offer: IncomingCallOfferData
 }
 
 interface CallState {
@@ -46,6 +46,9 @@ interface CallState {
 
   // Actions - Answer Call
   answerCall: (offer: IncomingCallOfferData, callerUsername?: string) => Promise<void>
+
+  // Actions - Set incoming call from socket
+  setIncomingCall: (call: IncomingCall) => void
 
   // Actions - Reject Call
   rejectCall: (callerId: string, roomCode: string) => void
@@ -98,6 +101,15 @@ export const useCallStore = create<CallState>((set, get) => ({
       const localStream = await webrtcManager.initLocalStream(constraints)
       webrtcManager.createPeerConnection()
       webrtcManager.addLocalTracks()
+
+      // Set up remote track handler to capture remote stream
+      webrtcManager.onTrackCallback((event) => {
+        const newStream = new MediaStream()
+        event.streams[0]?.getTracks().forEach((track) => {
+          newStream.addTrack(track)
+        })
+        set({ remoteStream: newStream })
+      })
 
       // Set up ICE candidate handler to send via socket
       webrtcManager.onIceCandidateCallback((candidate) => {
@@ -159,11 +171,14 @@ export const useCallStore = create<CallState>((set, get) => ({
       webrtcManager.createPeerConnection()
       webrtcManager.addLocalTracks()
 
-      // Set remote description (offer)
-      await webrtcManager.setRemoteDescription(offer.offer)
-
-      // Create answer
-      const answer = await webrtcManager.createAnswer()
+      // Set up remote track handler to capture remote stream
+      webrtcManager.onTrackCallback((event) => {
+        const newStream = new MediaStream()
+        event.streams[0]?.getTracks().forEach((track) => {
+          newStream.addTrack(track)
+        })
+        set({ remoteStream: newStream })
+      })
 
       // Set up ICE candidate handler to send via socket
       webrtcManager.onIceCandidateCallback((candidate) => {
@@ -173,6 +188,12 @@ export const useCallStore = create<CallState>((set, get) => ({
           candidate,
         })
       })
+
+      // Set remote description (offer)
+      await webrtcManager.setRemoteDescription(offer.offer)
+
+      // Create answer
+      const answer = await webrtcManager.createAnswer()
 
       // Send answer via socket
       const callSocket = getCallSocket()
@@ -207,6 +228,10 @@ export const useCallStore = create<CallState>((set, get) => ({
     const callSocket = getCallSocket()
     callSocket.sendCallReject({ callerId, roomCode })
     set({ incomingCall: null })
+  },
+
+  setIncomingCall: (call: IncomingCall) => {
+    set({ incomingCall: call })
   },
 
   handleCallAnswered: async (data: CallAnsweredData) => {
@@ -344,6 +369,10 @@ export const useCallStore = create<CallState>((set, get) => ({
     if (webrtcManager) {
       webrtcManager.close()
     }
+
+    // Clear socket callbacks (map page will re-register on remount)
+    const callSocket = getCallSocket()
+    callSocket.clearCallbacks()
 
     set({
       activeCall: null,

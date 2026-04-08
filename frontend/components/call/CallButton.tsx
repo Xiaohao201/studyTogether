@@ -7,6 +7,7 @@
 import { Phone, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useCallStore } from '@/store/callStore'
+import { getCallSocket } from '@/lib/callSocket'
 import type { CallType } from '@/types'
 
 interface CallButtonProps {
@@ -27,6 +28,13 @@ export function CallButton({
   const { initiateCall, isLoading } = useCallStore()
 
   const handleInitiateCall = async (callType: CallType) => {
+    const callSocket = getCallSocket()
+    if (!callSocket.isConnected()) {
+      const token = localStorage.getItem('access_token')
+      if (!token) return
+      callSocket.connect(token)
+    }
+
     try {
       await initiateCall(userId, callType)
       onCallInitiated?.()
