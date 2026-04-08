@@ -24,13 +24,10 @@ async def create_study_session(
     """
     session_service = SessionService(db)
 
-    # Check if user already has an active session
+    # Auto-end any stale active session before creating a new one
     active_session = await session_service.get_active_session(str(current_user.id))
     if active_session:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You already have an active session. Please end it first.",
-        )
+        await session_service.end_session(str(active_session.id), str(current_user.id))
 
     # Create new session
     session = await session_service.create_session(str(current_user.id), session_data)
