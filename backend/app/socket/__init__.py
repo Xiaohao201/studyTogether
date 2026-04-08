@@ -31,9 +31,9 @@ async def authenticate_socket(token: str) -> str | None:
     Returns:
         User ID if authenticated, None otherwise
     """
-    from app.core.security import decode_access_token
+    from app.core.security import decode_token
 
-    payload = decode_access_token(token)
+    payload = decode_token(token)
     if payload is None:
         return None
 

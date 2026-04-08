@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Force rebuild timestamp
-ARG CACHEBUST=2025-04-07-13
+ARG CACHEBUST=2025-04-08-01
 
 WORKDIR /app
 
@@ -28,5 +28,5 @@ RUN echo "Build timestamp: $CACHEBUST" && \
 # Expose port
 EXPOSE 8000
 
-# Start server (migrations will be run manually after deployment)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start server with Socket.io ASGI support
+CMD ["sh", "-c", "uvicorn app.main:socket_app --host 0.0.0.0 --port ${PORT:-8000}"]
