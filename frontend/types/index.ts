@@ -225,3 +225,103 @@ export interface ParticipantMediaChangedData {
   hasAudio: boolean
   hasVideo: boolean
 }
+
+// Study Room Types
+export type StudyRoomStatus = 'waiting' | 'active' | 'ended'
+export type TimerPhase = 'focus' | 'break'
+
+export interface StudyRoom {
+  id: string
+  room_code: string
+  host_id: string
+  subject: string | null
+  room_status: StudyRoomStatus
+  focus_duration: number
+  break_duration: number
+  started_at: string | null
+  ended_at: string | null
+  created_at: string
+  participants: StudyRoomParticipantResponse[]
+}
+
+export interface StudyRoomParticipantResponse {
+  id: string
+  study_room_id: string
+  user_id: string
+  username: string | null
+  joined_at: string
+  left_at: string | null
+}
+
+export interface StudyRoomMessageResponse {
+  id: string
+  study_room_id: string
+  user_id: string
+  username: string | null
+  content: string
+  created_at: string
+}
+
+export interface StudyRoomCreate {
+  target_user_id: string
+  subject?: string | null
+  focus_duration?: number
+  break_duration?: number
+}
+
+export interface StudyRoomEnd {
+  room_code: string
+}
+
+export interface TimerState {
+  roomCode: string
+  phase: TimerPhase
+  remainingSeconds: number
+  isPaused: boolean
+  phaseChangedAt: string
+}
+
+export interface IncomingStudyInvite {
+  inviterId: string
+  inviterUsername: string
+  roomCode: string
+  subject: string | null
+}
+
+export interface StudyInviteAccepted {
+  roomCode: string
+  accepterId: string
+}
+
+export interface StudyInviteRejected {
+  roomCode: string
+  rejecterId: string
+}
+
+export interface StudyRoomJoined {
+  roomCode: string
+}
+
+export interface StudyRoomLeft {
+  roomCode: string
+  userId: string
+}
+
+export interface StudyRoomEnded {
+  roomCode: string
+  endedBy: string
+}
+
+export interface TimerPhaseChanged {
+  roomCode: string
+  phase: TimerPhase
+  remainingSeconds: number
+}
+
+export interface StudyRoomMessageData {
+  roomCode: string
+  userId: string
+  username: string
+  content: string
+  createdAt: string
+}

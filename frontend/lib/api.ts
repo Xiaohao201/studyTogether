@@ -210,4 +210,39 @@ export const callsApi = {
   },
 };
 
+// Study Rooms API
+export const studyRoomsApi = {
+  startStudyRoom: async (data: {
+    target_user_id: string;
+    subject?: string | null;
+    focus_duration?: number;
+    break_duration?: number;
+  }) => {
+    const response = await api.post('/api/study-rooms/start', data);
+    return response.data;
+  },
+
+  getStudyRoom: async (roomCode: string) => {
+    const response = await api.get(`/api/study-rooms/${roomCode}`);
+    return response.data;
+  },
+
+  endStudyRoom: async (roomCode: string) => {
+    const response = await api.post('/api/study-rooms/end', { room_code: roomCode });
+    return response.data;
+  },
+
+  leaveStudyRoom: async (roomCode: string) => {
+    const response = await api.post(`/api/study-rooms/${roomCode}/leave`);
+    return response.data;
+  },
+
+  getMessages: async (roomCode: string, limit: number = 50, offset: number = 0) => {
+    const response = await api.get(
+      `/api/study-rooms/${roomCode}/messages?limit=${limit}&offset=${offset}`
+    );
+    return response.data;
+  },
+};
+
 export default api;

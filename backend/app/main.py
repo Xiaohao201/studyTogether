@@ -251,20 +251,23 @@ async def enable_postgis_extension():
 
 
 # Include routers
-from app.api import auth, users, locations, sessions, calls
+from app.api import auth, users, locations, sessions, calls, study_rooms
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(locations.router, prefix="/api/locations", tags=["Locations"])
 app.include_router(sessions.router, prefix="/api/sessions", tags=["Study Sessions"])
 app.include_router(calls.router, prefix="/api/calls", tags=["Calls"])
+app.include_router(study_rooms.router, prefix="/api/study-rooms", tags=["Study Rooms"])
 
 # Setup Socket.io
 from app.socket import sio, connected_users
 from app.socket.call_handler import register_call_handlers
+from app.socket.study_room_handler import register_study_room_handlers
 
 # Register call handlers
 register_call_handlers()
+register_study_room_handlers()
 
 # Create Socket.io ASGI app, wrapped with CORS at the outermost layer
 _asgi_app = socketio.ASGIApp(sio, app)

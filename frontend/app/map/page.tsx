@@ -8,9 +8,11 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
-import { useAuthStore, useLocationStore, useSessionStore, useCallStore } from '../../store';
+import { useAuthStore, useLocationStore, useSessionStore, useCallStore, useStudyRoomStore } from '../../store';
 import { CallButton } from '../../components/call/CallButton';
 import { IncomingCallDialog } from '../../components/call/IncomingCallDialog';
+import { StudyRoomButton } from '../../components/study-room/StudyRoomButton';
+import { IncomingStudyInviteDialog } from '../../components/study-room/IncomingStudyInviteDialog';
 import { getCallSocket } from '../../lib/callSocket';
 import type { NearbyUser } from '../../types';
 
@@ -43,6 +45,7 @@ export default function MapPage() {
     fetchActiveSession,
   } = useSessionStore();
   const { incomingCall, activeCall } = useCallStore();
+  const { incomingInvite } = useStudyRoomStore();
 
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
@@ -90,6 +93,20 @@ export default function MapPage() {
       },
       onCallUserUnavailable: (data) => {
         useCallStore.getState().handleUserUnavailable(data);
+      },
+      // Study room events
+      onIncomingStudyInvite: (data) => {
+        useStudyRoomStore.getState().setIncomingInvite(data);
+      },
+      onStudyInviteAccepted: (data) => {
+        useStudyRoomStore.getState().handleInviteAccepted(data);
+        router.push(`/study-room/${data.roomCode}`);
+      },
+      onStudyRoomJoined: (data) => {
+        router.push(`/study-room/${data.roomCode}`);
+      },
+      onStudyInviteRejected: () => {
+        useStudyRoomStore.getState().handleInviteRejected();
       },
     });
 
@@ -167,6 +184,10 @@ export default function MapPage() {
     router.push('/');
   };
 
+  const handleStudyRoomCreated = (roomCode: string) => {
+    router.push(`/study-room/${roomCode}`);
+  };
+
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -239,12 +260,19 @@ export default function MapPage() {
                             {nearbyUser.subject}
                           </p>
                         )}
-                        <div className="mt-2">
+                        <div className="mt-2 flex items-center space-x-2">
                           <CallButton
                             userId={nearbyUser.id}
                             username={nearbyUser.username}
                             variant="icon"
                             onCallInitiated={() => {}}
+                          />
+                          <StudyRoomButton
+                            userId={nearbyUser.id}
+                            username={nearbyUser.username}
+                            subject={nearbyUser.subject}
+                            variant="icon"
+                            onRoomCreated={handleStudyRoomCreated}
                           />
                         </div>
                       </div>
@@ -354,6 +382,14 @@ export default function MapPage() {
         open={showIncomingCallDialog}
         onOpenChange={setShowIncomingCallDialog}
         incomingCall={incomingCall}
+      />
+
+      {/* Incoming Study Invite Dialog */}
+      <IncomingStudyInviteDialog
+        invite={incomingInvite}
+        onAccept={(invite) => {
+          router.push(`/study-room/${invite.roomCode}`);
+        }}
       />
     </div>
   );

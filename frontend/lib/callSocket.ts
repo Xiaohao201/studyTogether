@@ -15,6 +15,15 @@ import type {
   CallRejectedData,
   CallEndedData,
   ParticipantMediaChangedData,
+  IncomingStudyInvite,
+  StudyInviteAccepted,
+  StudyInviteRejected,
+  StudyRoomJoined,
+  StudyRoomLeft,
+  StudyRoomEnded,
+  TimerState,
+  TimerPhaseChanged,
+  StudyRoomMessageData,
 } from '@/types'
 
 export interface CallSocketCallbacks {
@@ -25,6 +34,18 @@ export interface CallSocketCallbacks {
   onCallEnded?: (data: CallEndedData) => void
   onParticipantMediaChanged?: (data: ParticipantMediaChangedData) => void
   onCallUserUnavailable?: (data: { roomCode: string; userId: string }) => void
+  // Study room callbacks
+  onIncomingStudyInvite?: (data: IncomingStudyInvite) => void
+  onStudyInviteAccepted?: (data: StudyInviteAccepted) => void
+  onStudyInviteRejected?: (data: StudyInviteRejected) => void
+  onStudyRoomJoined?: (data: StudyRoomJoined) => void
+  onStudyRoomLeft?: (data: StudyRoomLeft) => void
+  onStudyRoomEnded?: (data: StudyRoomEnded) => void
+  onTimerState?: (data: TimerState) => void
+  onTimerPhaseChanged?: (data: TimerPhaseChanged) => void
+  onStudyRoomMessage?: (data: StudyRoomMessageData) => void
+  onStudyInviteFailed?: (data: { roomCode: string; reason: string }) => void
+  // Connection
   onConnected?: () => void
   onDisconnected?: () => void
   onError?: (error: string) => void
@@ -113,6 +134,55 @@ class CallSocketManager {
     this.socket.on('call-user-unavailable', (data: { roomCode: string; userId: string }) => {
       console.log('[CallSocket] Call user unavailable:', data)
       this.callbacks.onCallUserUnavailable?.(data)
+    })
+
+    // Study room events
+    this.socket.on('incoming-study-invite', (data: IncomingStudyInvite) => {
+      console.log('[CallSocket] Incoming study invite:', data)
+      this.callbacks.onIncomingStudyInvite?.(data)
+    })
+
+    this.socket.on('study-invite-accepted', (data: StudyInviteAccepted) => {
+      console.log('[CallSocket] Study invite accepted:', data)
+      this.callbacks.onStudyInviteAccepted?.(data)
+    })
+
+    this.socket.on('study-invite-rejected', (data: StudyInviteRejected) => {
+      console.log('[CallSocket] Study invite rejected:', data)
+      this.callbacks.onStudyInviteRejected?.(data)
+    })
+
+    this.socket.on('study-room-joined', (data: StudyRoomJoined) => {
+      console.log('[CallSocket] Study room joined:', data)
+      this.callbacks.onStudyRoomJoined?.(data)
+    })
+
+    this.socket.on('study-room-left', (data: StudyRoomLeft) => {
+      console.log('[CallSocket] Study room left:', data)
+      this.callbacks.onStudyRoomLeft?.(data)
+    })
+
+    this.socket.on('study-room-ended', (data: StudyRoomEnded) => {
+      console.log('[CallSocket] Study room ended:', data)
+      this.callbacks.onStudyRoomEnded?.(data)
+    })
+
+    this.socket.on('timer-state', (data: TimerState) => {
+      this.callbacks.onTimerState?.(data)
+    })
+
+    this.socket.on('timer-phase-changed', (data: TimerPhaseChanged) => {
+      console.log('[CallSocket] Timer phase changed:', data)
+      this.callbacks.onTimerPhaseChanged?.(data)
+    })
+
+    this.socket.on('study-room-message', (data: StudyRoomMessageData) => {
+      this.callbacks.onStudyRoomMessage?.(data)
+    })
+
+    this.socket.on('study-invite-failed', (data: { roomCode: string; reason: string }) => {
+      console.log('[CallSocket] Study invite failed:', data)
+      this.callbacks.onStudyInviteFailed?.(data)
     })
   }
 
@@ -205,6 +275,138 @@ class CallSocketManager {
       return
     }
     this.socket.emit('media_toggle', data)
+  }
+
+  // ===== Study Room Methods =====
+
+  /**
+   * Send study room invite.
+   */
+  sendStudyRoomInvite(data: {
+    targetUserId: string
+    roomCode: string
+    subject: string | null
+    inviterUsername: string
+  }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_invite', data)
+  }
+
+  /**
+   * Accept study room invite.
+   */
+  sendStudyRoomAccept(data: { roomCode: string; inviterId: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_accept', data)
+  }
+
+  /**
+   * Reject study room invite.
+   */
+  sendStudyRoomReject(data: { roomCode: string; inviterId: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_reject', data)
+  }
+
+  /**
+   * Join a study room page.
+   */
+  sendStudyRoomJoin(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_join', data)
+  }
+
+  /**
+   * Leave a study room.
+   */
+  sendStudyRoomLeave(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_leave', data)
+  }
+
+  /**
+   * End a study room (host only).
+   */
+  sendStudyRoomEnd(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_end', data)
+  }
+
+  /**
+   * Start the Pomodoro timer.
+   */
+  sendTimerStart(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('timer_start', data)
+  }
+
+  /**
+   * Pause the timer.
+   */
+  sendTimerPause(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('timer_pause', data)
+  }
+
+  /**
+   * Resume the timer.
+   */
+  sendTimerResume(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('timer_resume', data)
+  }
+
+  /**
+   * Skip the current timer phase.
+   */
+  sendTimerSkip(data: { roomCode: string }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('timer_skip', data)
+  }
+
+  /**
+   * Send a chat message.
+   */
+  sendStudyRoomMessage(data: {
+    roomCode: string
+    content: string
+    username: string
+  }): void {
+    if (!this.socket?.connected) {
+      console.error('[CallSocket] Not connected')
+      return
+    }
+    this.socket.emit('study_room_message', data)
   }
 
   /**
