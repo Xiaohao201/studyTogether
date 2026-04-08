@@ -2,7 +2,7 @@
 
 import logging
 from typing import Dict, Any
-from python_socketio import AsyncServer
+from socketio import AsyncServer
 
 from app.core.config import get_settings
 
