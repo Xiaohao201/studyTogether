@@ -70,7 +70,8 @@ class CallSocketManager {
 
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app'
 
-    this.socket = io(`${backendUrl}/socket.io`, {
+    this.socket = io(backendUrl, {
+      path: '/socket.io',
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
