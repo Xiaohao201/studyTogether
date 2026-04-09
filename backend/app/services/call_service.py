@@ -53,14 +53,20 @@ class CallService:
         Returns:
             Created CallRoom object with participants, or None if target user not found
         """
+        import logging
+        log = logging.getLogger(__name__)
+
         # Verify target user exists
+        log.info("[CallService] Step 1: Looking up target user")
         target_query = select(User).where(User.id == uuid.UUID(call_data.target_user_id))
         target_result = await self.db.execute(target_query)
         target_user = target_result.scalar_one_or_none()
 
         if not target_user:
+            log.warning("[CallService] Target user not found")
             return None
 
+        log.info("[CallService] Step 2: Generating room code")
         # Generate unique room code
         room_code = self._generate_room_code()
 
@@ -73,9 +79,9 @@ class CallService:
                 break
             room_code = self._generate_room_code()
         else:
-            # Could not generate unique code
             return None
 
+        log.info("[CallService] Step 3: Creating CallRoom object")
         # Create call room
         call_room = CallRoom(
             id=uuid.uuid4(),
@@ -86,9 +92,11 @@ class CallService:
             started_at=datetime.utcnow(),
         )
 
+        log.info("[CallService] Step 4: Adding to session and flushing")
         self.db.add(call_room)
         await self.db.flush()  # Get the ID
 
+        log.info("[CallService] Step 5: Adding host participant")
         # Add host as participant
         host_participant = CallParticipant(
             id=uuid.uuid4(),
@@ -100,7 +108,8 @@ class CallService:
         )
         self.db.add(host_participant)
 
-        # Add target user as participant (they haven't joined yet, but we reserve their spot)
+        log.info("[CallService] Step 6: Adding target participant")
+        # Add target user as participant
         target_participant = CallParticipant(
             id=uuid.uuid4(),
             call_room_id=call_room.id,
@@ -111,16 +120,20 @@ class CallService:
         )
         self.db.add(target_participant)
 
+        log.info("[CallService] Step 7: Committing to database")
         await self.db.commit()
+        log.info("[CallService] Step 8: Refreshing call_room")
         await self.db.refresh(call_room)
 
         # Load participants for response
+        log.info("[CallService] Step 9: Loading participants")
         participants_query = select(CallParticipant).where(
             CallParticipant.call_room_id == call_room.id
         )
         participants_result = await self.db.execute(participants_query)
         call_room.participants = list(participants_result.scalars().all())
 
+        log.info("[CallService] Step 10: Done, returning call room")
         return call_room
 
     async def get_call_room_by_code(

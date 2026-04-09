@@ -53,8 +53,13 @@ class Settings(BaseSettings):
     def get_database_url(self) -> str:
         """Get DATABASE_URL, constructing from components if needed."""
         if self.DATABASE_URL:
-            # Railway PostgreSQL uses empty username - use it as-is
-            return self.DATABASE_URL
+            url = self.DATABASE_URL
+            # Ensure asyncpg driver for SQLAlchemy async
+            url = url.replace("postgresql://", "postgresql+asyncpg://")
+            url = url.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+            # Avoid double-replace if already has asyncpg
+            url = url.replace("postgresql+asyncpg+asyncpg://", "postgresql+asyncpg://")
+            return url
 
         # Construct from components
         if not all([self.POSTGRES_PASSWORD, self.PGDATABASE]):
