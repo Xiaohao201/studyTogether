@@ -49,54 +49,34 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database (create extensions and tables).
+    """Initialize database extensions.
 
-    Production (ENVIRONMENT=production): uses Alembic migrations.
-    Development: uses Base.metadata.create_all with checkfirst=True.
+    Table creation is handled by Alembic (Dockerfile CMD: alembic upgrade head).
+    This function only checks/enables PostGIS and validates connectivity.
     """
     from sqlalchemy import text
 
-    # Try to create PostGIS extension in a separate transaction
+    # Try to create PostGIS extension
     postgis_enabled = False
     try:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
-            print("[INFO] PostGIS extension enabled successfully")
-
             result = await conn.execute(text("SELECT PostGIS_Version()"))
             version = result.scalar()
-            print(f"[INFO] PostGIS version: {version}")
+            print(f"[INFO] PostGIS enabled, version: {version}")
             postgis_enabled = True
     except Exception as e:
-        print(f"[WARNING] PostGIS extension not available: {e}")
-        print("[INFO] Location features will use decimal coordinates fallback mode")
+        print(f"[WARNING] PostGIS not available: {e}")
+        print("[INFO] Using decimal coordinates fallback")
 
-    # Create/migrate tables
-    if settings.ENVIRONMENT == "production":
-        # Production: use Alembic migrations to avoid ENUM conflicts
-        import subprocess
-        try:
-            result = subprocess.run(
-                ["alembic", "upgrade", "head"],
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-            if result.returncode == 0:
-                print("[INFO] Database tables initialized via Alembic migration")
-            else:
-                print(f"[ERROR] Alembic migration failed: {result.stderr}")
-                raise RuntimeError(f"Alembic migration failed: {result.stderr}")
-        except FileNotFoundError:
-            print("[WARNING] Alembic not found, falling back to create_all")
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-                print("[INFO] Database tables initialized via create_all (fallback)")
-    else:
-        # Development: use create_all (ENUM types handled gracefully)
+    # Validate database connectivity
+    try:
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            print("[INFO] Database tables initialized via create_all")
+            await conn.execute(text("SELECT 1"))
+        print("[INFO] Database connection validated")
+    except Exception as e:
+        print(f"[ERROR] Database connection failed: {e}")
+        raise
 
     return postgis_enabled
 
