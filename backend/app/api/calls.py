@@ -48,10 +48,11 @@ async def start_call(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[Call] Error starting call: {e}")
+        import traceback
+        logger.error(f"[Call] Error starting call: {e}\n{traceback.format_exc()}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to start call"
+            detail=f"Failed to start call: {str(e)}"
         )
 
 
