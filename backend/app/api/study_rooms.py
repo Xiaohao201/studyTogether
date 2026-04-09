@@ -18,6 +18,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _build_room_response(study_room) -> dict:
+    """Convert ORM StudyRoom to response dict, extracting usernames from relationships."""
+    return {
+        "id": str(study_room.id),
+        "room_code": study_room.room_code,
+        "host_id": str(study_room.host_id),
+        "subject": study_room.subject,
+        "room_status": study_room.room_status,
+        "focus_duration": study_room.focus_duration,
+        "break_duration": study_room.break_duration,
+        "started_at": study_room.started_at,
+        "ended_at": study_room.ended_at,
+        "created_at": study_room.created_at,
+        "participants": [
+            {
+                "id": str(p.id),
+                "study_room_id": str(p.study_room_id),
+                "user_id": str(p.user_id),
+                "username": p.user.username if p.user else None,
+                "joined_at": p.joined_at,
+                "left_at": p.left_at,
+            }
+            for p in study_room.participants
+        ],
+    }
+
+
+def _build_message_response(message) -> dict:
+    """Convert ORM StudyRoomMessage to response dict."""
+    return {
+        "id": str(message.id),
+        "study_room_id": str(message.study_room_id),
+        "user_id": str(message.user_id),
+        "username": message.user.username if message.user else None,
+        "content": message.content,
+        "created_at": message.created_at,
+    }
+
+
 @router.post("/start", response_model=StudyRoomResponse)
 async def start_study_room(
     room_data: StudyRoomCreate,
@@ -43,15 +82,15 @@ async def start_study_room(
             f"(room: {study_room.room_code})"
         )
 
-        return study_room
+        return _build_room_response(study_room)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[StudyRoom] Error creating study room: {e}")
+        logger.error(f"[StudyRoom] Error creating study room: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create study room"
+            detail=f"Failed to create study room: {e}"
         )
 
 
@@ -72,7 +111,6 @@ async def get_study_room(
                 detail="Study room not found"
             )
 
-        # Verify user is a participant
         is_member = await service.is_participant(room_code, str(current_user.id))
         if not is_member:
             raise HTTPException(
@@ -80,15 +118,15 @@ async def get_study_room(
                 detail="You are not a participant in this study room"
             )
 
-        return study_room
+        return _build_room_response(study_room)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[StudyRoom] Error getting study room: {e}")
+        logger.error(f"[StudyRoom] Error getting study room: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get study room"
+            detail=f"Failed to get study room: {e}"
         )
 
 
@@ -116,15 +154,15 @@ async def end_study_room(
             f"[StudyRoom] User {current_user.username} ended study room {end_data.room_code}"
         )
 
-        return study_room
+        return _build_room_response(study_room)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[StudyRoom] Error ending study room: {e}")
+        logger.error(f"[StudyRoom] Error ending study room: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to end study room"
+            detail=f"Failed to end study room: {e}"
         )
 
 
@@ -138,7 +176,6 @@ async def leave_study_room(
     try:
         service = StudyRoomService(db)
 
-        # Verify user is a participant
         is_member = await service.is_participant(room_code, str(current_user.id))
         if not is_member:
             raise HTTPException(
@@ -146,7 +183,7 @@ async def leave_study_room(
                 detail="You are not a participant in this study room"
             )
 
-        participant = await service.leave_study_room(room_code, str(current_user.id))
+        await service.leave_study_room(room_code, str(current_user.id))
 
         logger.info(
             f"[StudyRoom] User {current_user.username} left study room {room_code}"
@@ -157,10 +194,10 @@ async def leave_study_room(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[StudyRoom] Error leaving study room: {e}")
+        logger.error(f"[StudyRoom] Error leaving study room: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to leave study room"
+            detail=f"Failed to leave study room: {e}"
         )
 
 
@@ -176,7 +213,6 @@ async def get_study_room_messages(
     try:
         service = StudyRoomService(db)
 
-        # Verify user is a participant
         is_member = await service.is_participant(room_code, str(current_user.id))
         if not is_member:
             raise HTTPException(
@@ -185,13 +221,13 @@ async def get_study_room_messages(
             )
 
         messages = await service.get_messages(room_code, limit=limit, offset=offset)
-        return messages
+        return [_build_message_response(m) for m in messages]
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"[StudyRoom] Error getting messages: {e}")
+        logger.error(f"[StudyRoom] Error getting messages: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get messages"
+            detail=f"Failed to get messages: {e}"
         )
