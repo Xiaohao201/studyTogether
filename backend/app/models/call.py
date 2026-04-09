@@ -38,11 +38,11 @@ class CallRoom(Base):
 
     # Call details
     call_type = Column(
-        SQLEnum('voice', 'video', name='call_type'),
+        SQLEnum('voice', 'video', name='call_type', create_type=False),
         nullable=False
     )
     call_status = Column(
-        SQLEnum('initiated', 'ongoing', 'ended', 'rejected', name='call_status'),
+        SQLEnum('initiated', 'ongoing', 'ended', 'rejected', name='call_status', create_type=False),
         nullable=False,
         default='initiated',
         index=True

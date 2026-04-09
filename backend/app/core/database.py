@@ -12,29 +12,6 @@ settings = get_settings()
 # Get DATABASE_URL (may be constructed from components)
 database_url = settings.get_database_url()
 
-# Debug: Print database URL (hide password for security)
-safe_url = database_url.split('@')[-1] if '@' in database_url else database_url
-print(f"[DEBUG] 🗄️  Database URL (host): ...@{safe_url}")
-print(f"[DEBUG] 📋 Full DATABASE_URL from settings: {settings.DATABASE_URL[:60] if settings.DATABASE_URL else 'None'}...")
-print(f"[DEBUG] 🔧 PGUSER: '{settings.PGUSER}', PGHOST: '{settings.PGHOST}', POSTGRES_HOST: '{settings.POSTGRES_HOST}'")
-
-# Debug: Print the actual URL being used (with username info)
-if '@' in database_url:
-    user_part = database_url.split('://')[1].split('@')[0] if '://' in database_url else ''
-    username = user_part.split(':')[0] if ':' in user_part else ''
-    print(f"[DEBUG] 👤 Actual username in connection string: '{username}'")
-print(f"[DEBUG] 🔗 Final database URL: {database_url[:80]}...")
-
-# Debug: Print all environment variables (database-related)
-import os
-db_vars = {k: v for k, v in os.environ.items() if any(keyword in k.upper() for keyword in ['PG', 'DATABASE', 'POSTGRES', 'RAILWAY'])}
-print(f"[DEBUG] 🔍 Database-related environment variables:")
-for key, value in sorted(db_vars.items()):
-    # Hide passwords
-    if 'PASSWORD' in key or 'TOKEN' in key:
-        value = value[:10] + '...' if len(value) > 10 else '***'
-    print(f"  {key}={value}")
-
 # Create async engine
 engine = create_async_engine(
     database_url,
@@ -72,7 +49,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database (create extensions and tables)."""
+    """Initialize database (create extensions and tables).
+
+    Production (ENVIRONMENT=production): uses Alembic migrations.
+    Development: uses Base.metadata.create_all with checkfirst=True.
+    """
     from sqlalchemy import text
 
     # Try to create PostGIS extension in a separate transaction
@@ -80,22 +61,42 @@ async def init_db():
     try:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
-            print("[INFO] ✓ PostGIS extension enabled successfully")
+            print("[INFO] PostGIS extension enabled successfully")
 
-            # Verify PostGIS is working
             result = await conn.execute(text("SELECT PostGIS_Version()"))
             version = result.scalar()
-            print(f"[INFO] ✓ PostGIS version: {version}")
+            print(f"[INFO] PostGIS version: {version}")
             postgis_enabled = True
     except Exception as e:
         print(f"[WARNING] PostGIS extension not available: {e}")
         print("[INFO] Location features will use decimal coordinates fallback mode")
-        print("[INFO] Railway PostgreSQL does not support PostGIS - using standard decimal storage")
 
-    # Create tables in a separate transaction
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        print("[INFO] ✓ Database tables initialized")
+    # Create/migrate tables
+    if settings.ENVIRONMENT == "production":
+        # Production: use Alembic migrations to avoid ENUM conflicts
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["alembic", "upgrade", "head"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if result.returncode == 0:
+                print("[INFO] Database tables initialized via Alembic migration")
+            else:
+                print(f"[ERROR] Alembic migration failed: {result.stderr}")
+                raise RuntimeError(f"Alembic migration failed: {result.stderr}")
+        except FileNotFoundError:
+            print("[WARNING] Alembic not found, falling back to create_all")
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                print("[INFO] Database tables initialized via create_all (fallback)")
+    else:
+        # Development: use create_all (ENUM types handled gracefully)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            print("[INFO] Database tables initialized via create_all")
 
     return postgis_enabled
 

@@ -38,7 +38,7 @@ class User(Base):
     # Profile
     subject = Column(String(100), nullable=True)
     status = Column(
-        SQLEnum('studying', 'break', 'offline', name='user_status'),
+        SQLEnum('studying', 'break', 'offline', name='user_status', create_type=False),
         default='offline',
         nullable=False,
         index=True
@@ -47,7 +47,7 @@ class User(Base):
 
     # Privacy
     privacy_mode = Column(
-        SQLEnum('exact', 'fuzzy', 'invisible', name='privacy_mode'),
+        SQLEnum('exact', 'fuzzy', 'invisible', name='privacy_mode', create_type=False),
         default='fuzzy',
         nullable=False
     )
