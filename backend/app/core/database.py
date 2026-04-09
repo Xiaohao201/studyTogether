@@ -34,15 +34,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency function to get database session.
 
-    Usage in FastAPI:
-        @app.get("/users")
-        async def get_users(db: AsyncSession = Depends(get_db)):
-            ...
+    The caller is responsible for committing. We only rollback on error.
     """
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
             await session.rollback()
             raise
