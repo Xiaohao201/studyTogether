@@ -2,6 +2,7 @@
 
 import logging
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy import text
 
 from app.dependencies import CurrentUser, DBSession
 from app.schemas.call import CallRoomCreate, CallRoomResponse, CallEnd
@@ -10,6 +11,56 @@ from app.services.call_service import CallService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/debug/schema")
+async def debug_call_schema(db: DBSession):
+    """Debug endpoint: check call_rooms table schema."""
+    result = {}
+    try:
+        # Check if call_rooms table exists and its column types
+        r = await db.execute(text(
+            "SELECT column_name, data_type, udt_name "
+            "FROM information_schema.columns "
+            "WHERE table_name = 'call_rooms' ORDER BY ordinal_position"
+        ))
+        result["call_rooms_columns"] = [
+            {"name": row[0], "type": row[1], "udt": row[2]}
+            for row in r.fetchall()
+        ]
+    except Exception as e:
+        result["call_rooms_error"] = str(e)
+
+    try:
+        r = await db.execute(text(
+            "SELECT column_name, data_type, udt_name "
+            "FROM information_schema.columns "
+            "WHERE table_name = 'call_participants' ORDER BY ordinal_position"
+        ))
+        result["call_participants_columns"] = [
+            {"name": row[0], "type": row[1], "udt": row[2]}
+            for row in r.fetchall()
+        ]
+    except Exception as e:
+        result["call_participants_error"] = str(e)
+
+    # Try a simple insert test
+    try:
+        import uuid
+        test_code = f"TEST{uuid.uuid4().hex[:4].upper()}"
+        r = await db.execute(text(
+            "INSERT INTO call_rooms (id, room_code, host_id, call_type, call_status, started_at) "
+            "VALUES (:id, :code, :host, 'video', 'initiated', NOW()) RETURNING id"
+        ), {"id": str(uuid.uuid4()), "code": test_code, "host": str(uuid.uuid4())})
+        test_id = r.scalar()
+        await db.execute(text("DELETE FROM call_rooms WHERE id = :id"), {"id": str(test_id)})
+        await db.commit()
+        result["insert_test"] = "SUCCESS"
+    except Exception as e:
+        result["insert_test"] = f"FAILED: {str(e)}"
+        await db.rollback()
+
+    return result
 
 
 @router.post("/start", response_model=CallRoomResponse)
