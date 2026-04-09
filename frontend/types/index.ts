@@ -164,18 +164,6 @@ export interface CallEnd {
 }
 
 // WebRTC Signaling Types
-export interface RTCSessionDescriptionInit {
-  type: 'offer' | 'answer' | 'pranswer' | 'rollback'
-  sdp: string | null
-}
-
-export interface RTCIceCandidateInit {
-  candidate: string
-  sdpMid: string | null
-  sdpMLineIndex: number | null
-  usernameFragment: string | null
-}
-
 export interface CallOfferData {
   targetUserId: string
   roomCode: string

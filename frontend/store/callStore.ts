@@ -7,8 +7,6 @@ import type {
   CallRoom,
   CallRoomCreate,
   CallType,
-  RTCSessionDescriptionInit,
-  RTCIceCandidateInit,
   IncomingCallOfferData,
   CallAnsweredData,
   IceCandidateReceivedData,

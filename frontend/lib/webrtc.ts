@@ -4,12 +4,6 @@
  * Manages RTCPeerConnection, local/remote streams, and WebRTC signaling.
  */
 
-import type {
-  RTCSessionDescriptionInit,
-  RTCIceCandidateInit,
-  CallType,
-} from '@/types'
-
 export interface WebRTCConfig {
   iceServers?: RTCIceServer[]
   iceTransportPolicy?: 'all' | 'relay'
