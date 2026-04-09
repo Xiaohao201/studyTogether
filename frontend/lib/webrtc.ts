@@ -138,7 +138,7 @@ export class WebRTCManager {
 
     const offer = await this.peerConnection.createOffer()
     await this.peerConnection.setLocalDescription(offer)
-    return offer.toJSON()
+    return offer
   }
 
   /**
@@ -151,7 +151,7 @@ export class WebRTCManager {
 
     const answer = await this.peerConnection.createAnswer()
     await this.peerConnection.setLocalDescription(answer)
-    return answer.toJSON()
+    return answer
   }
 
   /**
