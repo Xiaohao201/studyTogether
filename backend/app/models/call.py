@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -12,17 +12,6 @@ from app.core.database import Base
 class CallRoom(Base):
     """
     Call room model for video/voice calls.
-
-    Attributes:
-        id: UUID primary key
-        room_code: Unique room code for joining calls
-        host_id: Foreign key to users table (call initiator)
-        call_type: Type of call ('voice' or 'video')
-        call_status: Current status ('initiated', 'ongoing', 'ended', 'rejected')
-        study_session_id: Optional link to study session
-        started_at: Call start timestamp
-        ended_at: Call end timestamp
-        duration_seconds: Call duration in seconds
     """
 
     __tablename__ = "call_rooms"
@@ -36,17 +25,9 @@ class CallRoom(Base):
         index=True
     )
 
-    # Call details
-    call_type = Column(
-        SQLEnum('voice', 'video', name='call_type', create_type=False),
-        nullable=False
-    )
-    call_status = Column(
-        SQLEnum('initiated', 'ongoing', 'ended', 'rejected', name='call_status', create_type=False),
-        nullable=False,
-        default='initiated',
-        index=True
-    )
+    # Call details - use String instead of ENUM to avoid migration issues
+    call_type = Column(String(10), nullable=False)
+    call_status = Column(String(20), nullable=False, default='initiated', index=True)
 
     # Optional link to study session
     study_session_id = Column(
@@ -76,15 +57,6 @@ class CallRoom(Base):
 class CallParticipant(Base):
     """
     Call participant model for tracking who is in a call.
-
-    Attributes:
-        id: UUID primary key
-        call_room_id: Foreign key to call_rooms table
-        user_id: Foreign key to users table
-        joined_at: When the participant joined
-        left_at: When the participant left
-        has_video: Whether participant has video enabled
-        has_audio: Whether participant has audio enabled
     """
 
     __tablename__ = "call_participants"
