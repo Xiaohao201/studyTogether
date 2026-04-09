@@ -70,31 +70,12 @@ export default function MapPage() {
     const callSocket = getCallSocket();
     callSocket.connect(token);
 
+    // Register all call-related handlers via the store so they persist
+    // across page navigations (no loss during map→call redirect)
+    useCallStore.getState().registerSocketHandlers();
+
+    // Register study room handlers separately (these are page-specific)
     callSocket.on({
-      onIncomingCallOffer: (data) => {
-        useCallStore.getState().setIncomingCall({
-          callerId: data.callerId,
-          roomCode: data.roomCode,
-          callType: data.callType || 'voice',
-          offer: data,
-        });
-      },
-      onCallAnswered: (data) => {
-        useCallStore.getState().handleCallAnswered(data);
-      },
-      onIceCandidate: (data) => {
-        useCallStore.getState().handleIceCandidate(data);
-      },
-      onCallEnded: (data) => {
-        useCallStore.getState().handleCallEnded(data);
-      },
-      onCallRejected: (data) => {
-        useCallStore.getState().handleCallRejected(data);
-      },
-      onCallUserUnavailable: (data) => {
-        useCallStore.getState().handleUserUnavailable(data);
-      },
-      // Study room events
       onIncomingStudyInvite: (data) => {
         useStudyRoomStore.getState().setIncomingInvite(data);
       },

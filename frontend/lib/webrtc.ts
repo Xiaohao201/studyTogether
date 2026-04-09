@@ -25,6 +25,7 @@ export class WebRTCManager {
   private onIceCandidate?: (candidate: RTCIceCandidateInit) => void
   private onTrack?: (event: RTCTrackEvent) => void
   private onDataChannelMessage?: (data: string) => void
+  private onConnectionStateChange?: (state: RTCPeerConnectionState) => void
 
   constructor(config?: WebRTCConfig) {
     this.config = config || {
@@ -127,7 +128,11 @@ export class WebRTCManager {
 
     // Connection state changes
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('[WebRTC] Connection state:', this.peerConnection?.connectionState)
+      const state = this.peerConnection?.connectionState
+      console.log('[WebRTC] Connection state:', state)
+      if (state && this.onConnectionStateChange) {
+        this.onConnectionStateChange(state)
+      }
     }
 
     // ICE connection state changes
@@ -332,6 +337,13 @@ export class WebRTCManager {
    */
   onDataChannelMessageCallback(callback: (data: string) => void): void {
     this.onDataChannelMessage = callback
+  }
+
+  /**
+   * Set connection state change callback.
+   */
+  onConnectionStateChangeCallback(callback: (state: RTCPeerConnectionState) => void): void {
+    this.onConnectionStateChange = callback
   }
 
   /**

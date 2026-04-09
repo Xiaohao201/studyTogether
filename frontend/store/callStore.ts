@@ -35,6 +35,7 @@ interface CallState {
   callStartTime: number | null
   isLoading: boolean
   error: string | null
+  isP2PConnected: boolean
 
   // WebRTC & Socket
   webrtcManager: WebRTCManager | null
@@ -64,6 +65,9 @@ interface CallState {
   handleParticipantMediaChanged: (data: ParticipantMediaChangedData) => void
   handleUserUnavailable: (data: { roomCode: string; userId: string }) => void
 
+  // Actions - Socket handler registration
+  registerSocketHandlers: () => void
+
   // Actions - Cleanup
   cleanup: () => void
   clearError: () => void
@@ -82,12 +86,59 @@ export const useCallStore = create<CallState>((set, get) => ({
   isLoading: false,
   error: null,
   webrtcManager: null,
+  isP2PConnected: false,
+
+  /**
+   * Register all call-related socket handlers on the singleton CallSocketManager.
+   * This should be called once on app load (from map page) so handlers persist
+   * across page navigations and are never lost during redirect.
+   */
+  registerSocketHandlers: () => {
+    const callSocket = getCallSocket()
+
+    callSocket.on({
+      onIncomingCallOffer: (data) => {
+        console.log('[CallStore] Incoming call offer:', data.callerId, data.roomCode)
+        get().setIncomingCall({
+          callerId: data.callerId,
+          roomCode: data.roomCode,
+          callType: data.callType || 'voice',
+          offer: data,
+        })
+      },
+      onCallAnswered: (data) => {
+        console.log('[CallStore] Received call-answered event')
+        get().handleCallAnswered(data)
+      },
+      onIceCandidate: (data) => {
+        console.log('[CallStore] Received ICE candidate')
+        get().handleIceCandidate(data)
+      },
+      onCallEnded: (data) => {
+        console.log('[CallStore] Received call-ended event')
+        get().handleCallEnded(data)
+      },
+      onCallRejected: (data) => {
+        console.log('[CallStore] Received call-rejected event')
+        get().handleCallRejected(data)
+      },
+      onParticipantMediaChanged: (data) => {
+        get().handleParticipantMediaChanged(data)
+      },
+      onCallUserUnavailable: (data) => {
+        get().handleUserUnavailable(data)
+      },
+    })
+
+    console.log('[CallStore] Socket handlers registered')
+  },
 
   initiateCall: async (targetUserId: string, callType: CallType) => {
-    set({ isLoading: true, error: null })
+    set({ isLoading: true, error: null, isP2PConnected: false })
     try {
       // Create call room via REST API
       const callRoom = await callsApi.startCall(targetUserId, callType)
+      console.log('[CallStore] Call room created:', callRoom.room_code)
 
       // Initialize WebRTC
       const webrtcManager = new WebRTCManager()
@@ -101,7 +152,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       try {
         localStream = await webrtcManager.initLocalStream(constraints)
       } catch (mediaError: any) {
-        // Clean up the call room if media fails
         try {
           await callsApi.endCall(callRoom.id)
         } catch { /* ignore cleanup error */ }
@@ -119,15 +169,15 @@ export const useCallStore = create<CallState>((set, get) => ({
 
       // Set up remote track handler to capture remote stream
       webrtcManager.onTrackCallback((event) => {
-        const newStream = new MediaStream()
-        event.streams[0]?.getTracks().forEach((track) => {
-          newStream.addTrack(track)
-        })
+        console.log('[CallStore] Remote track received:', event.track.kind)
+        const tracks = event.streams[0]?.getTracks() || [event.track]
+        const newStream = new MediaStream(tracks)
         set({ remoteStream: newStream })
       })
 
       // Set up ICE candidate handler to send via socket
       webrtcManager.onIceCandidateCallback((candidate) => {
+        console.log('[CallStore] Sending ICE candidate')
         const callSocket = getCallSocket()
         callSocket.sendIceCandidate({
           targetUserId,
@@ -135,8 +185,19 @@ export const useCallStore = create<CallState>((set, get) => ({
         })
       })
 
+      // Monitor connection state for P2P status
+      webrtcManager.onConnectionStateChangeCallback((state) => {
+        console.log('[CallStore] WebRTC connection state:', state)
+        if (state === 'connected') {
+          set({ isP2PConnected: true })
+        } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+          set({ isP2PConnected: false })
+        }
+      })
+
       // Create offer
       const offer = await webrtcManager.createOffer()
+      console.log('[CallStore] Offer created, sending via socket')
 
       // Send offer via socket
       const callSocket = getCallSocket()
@@ -146,6 +207,8 @@ export const useCallStore = create<CallState>((set, get) => ({
         callType,
         offer,
       })
+
+      console.log('[CallStore] Offer sent, setting activeCall')
 
       set({
         activeCall: callRoom,
@@ -158,6 +221,7 @@ export const useCallStore = create<CallState>((set, get) => ({
         isLoading: false,
       })
     } catch (error: any) {
+      console.error('[CallStore] initiateCall error:', error)
       set({
         error: error.response?.data?.detail || '发起通话失败',
         isLoading: false,
@@ -169,10 +233,11 @@ export const useCallStore = create<CallState>((set, get) => ({
     offer: IncomingCallOfferData,
     callerUsername?: string
   ) => {
-    set({ isLoading: true, error: null })
+    set({ isLoading: true, error: null, isP2PConnected: false })
     try {
       // Get call room details
       const callRoom = await callsApi.getCallRoom(offer.roomCode)
+      console.log('[CallStore] Answering call in room:', offer.roomCode)
 
       // Initialize WebRTC
       const webrtcManager = new WebRTCManager()
@@ -186,7 +251,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       try {
         localStream = await webrtcManager.initLocalStream(constraints)
       } catch (mediaError: any) {
-        // Reject call if media access fails
         const callSocket = getCallSocket()
         callSocket.sendCallReject({ callerId: offer.callerId, roomCode: offer.roomCode })
         const msg = mediaError.name === 'NotAllowedError'
@@ -203,15 +267,15 @@ export const useCallStore = create<CallState>((set, get) => ({
 
       // Set up remote track handler to capture remote stream
       webrtcManager.onTrackCallback((event) => {
-        const newStream = new MediaStream()
-        event.streams[0]?.getTracks().forEach((track) => {
-          newStream.addTrack(track)
-        })
+        console.log('[CallStore] Remote track received:', event.track.kind)
+        const tracks = event.streams[0]?.getTracks() || [event.track]
+        const newStream = new MediaStream(tracks)
         set({ remoteStream: newStream })
       })
 
       // Set up ICE candidate handler to send via socket
       webrtcManager.onIceCandidateCallback((candidate) => {
+        console.log('[CallStore] Sending ICE candidate')
         const callSocket = getCallSocket()
         callSocket.sendIceCandidate({
           targetUserId: offer.callerId,
@@ -219,11 +283,23 @@ export const useCallStore = create<CallState>((set, get) => ({
         })
       })
 
+      // Monitor connection state for P2P status
+      webrtcManager.onConnectionStateChangeCallback((state) => {
+        console.log('[CallStore] WebRTC connection state:', state)
+        if (state === 'connected') {
+          set({ isP2PConnected: true })
+        } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+          set({ isP2PConnected: false })
+        }
+      })
+
       // Set remote description (offer)
       await webrtcManager.setRemoteDescription(offer.offer)
+      console.log('[CallStore] Remote description (offer) set')
 
       // Create answer
       const answer = await webrtcManager.createAnswer()
+      console.log('[CallStore] Answer created, sending via socket')
 
       // Send answer via socket
       const callSocket = getCallSocket()
@@ -245,6 +321,7 @@ export const useCallStore = create<CallState>((set, get) => ({
         isLoading: false,
       })
     } catch (error: any) {
+      console.error('[CallStore] answerCall error:', error)
       set({
         error: error.response?.data?.detail || '接听通话失败',
         isLoading: false,
@@ -270,8 +347,9 @@ export const useCallStore = create<CallState>((set, get) => ({
     }
 
     try {
+      console.log('[CallStore] Setting remote description (answer)')
       await webrtcManager.setRemoteDescription(data.answer)
-      console.log('[CallStore] Call answered successfully')
+      console.log('[CallStore] Call answered successfully - remote description set')
     } catch (error) {
       console.error('[CallStore] Error handling call answer:', error)
       set({ error: 'Failed to establish connection' })
@@ -287,15 +365,15 @@ export const useCallStore = create<CallState>((set, get) => ({
 
     try {
       await webrtcManager.addIceCandidate(data.candidate)
+      console.log('[CallStore] ICE candidate added')
     } catch (error) {
       console.error('[CallStore] Error handling ICE candidate:', error)
     }
   },
 
   handleCallEnded: (data: CallEndedData) => {
-    const { cleanup } = get()
     console.log('[CallStore] Call ended:', data)
-    cleanup()
+    get().cleanup()
   },
 
   handleCallRejected: (data: CallRejectedData) => {
@@ -310,7 +388,6 @@ export const useCallStore = create<CallState>((set, get) => ({
 
   handleParticipantMediaChanged: (data: ParticipantMediaChangedData) => {
     console.log('[CallStore] Participant media changed:', data)
-    // Can be used to update UI indicators for remote participant
   },
 
   handleUserUnavailable: (data: { roomCode: string; userId: string }) => {
@@ -328,7 +405,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       webrtcManager.toggleAudio(newState)
       set({ isAudioEnabled: newState })
 
-      // Notify via socket
       const { activeCall } = get()
       if (activeCall) {
         const callSocket = getCallSocket()
@@ -348,7 +424,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       webrtcManager.toggleVideo(newState)
       set({ isVideoEnabled: newState })
 
-      // Notify via socket
       const { activeCall } = get()
       if (activeCall) {
         const callSocket = getCallSocket()
@@ -373,17 +448,14 @@ export const useCallStore = create<CallState>((set, get) => ({
     const hostId = activeCall.host_id
 
     try {
-      // REST first to ensure DB is updated
       await callsApi.endCall(callId)
 
-      // Then notify via socket
       const callSocket = getCallSocket()
       callSocket.sendCallEnded({
         roomCode,
         userId: hostId,
       })
     } catch {
-      // Still try to notify even if REST fails
       const callSocket = getCallSocket()
       callSocket.sendCallEnded({
         roomCode,
@@ -397,26 +469,13 @@ export const useCallStore = create<CallState>((set, get) => ({
   cleanup: () => {
     const { webrtcManager, localStream } = get()
 
-    // Stop media tracks
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop())
     }
 
-    // Close WebRTC
     if (webrtcManager) {
       webrtcManager.close()
     }
-
-    // Clear only call-specific callbacks, preserve other handlers (study room, etc.)
-    const callSocket = getCallSocket()
-    callSocket.on({
-      onCallAnswered: undefined,
-      onIceCandidate: undefined,
-      onCallEnded: undefined,
-      onCallRejected: undefined,
-      onParticipantMediaChanged: undefined,
-      onCallUserUnavailable: undefined,
-    })
 
     set({
       activeCall: null,
@@ -427,6 +486,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       isCallInitiator: false,
       callStartTime: null,
       error: null,
+      isP2PConnected: false,
     })
   },
 

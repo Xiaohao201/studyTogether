@@ -3,15 +3,18 @@
  *
  * Full-screen call interface for active calls.
  * Displays local/remote video and call controls.
+ *
+ * Socket event handlers are managed by callStore.registerSocketHandlers()
+ * which is called once from the map page. This page only handles video
+ * element binding and cleanup.
  */
 
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCallStore } from '@/store/callStore'
 import { CallControls, CallTimer } from '@/components/call/CallControls'
-import { getCallSocket } from '@/lib/callSocket'
 import { useAuthStore } from '@/store'
 
 export default function CallRoomPage({ params }: { params: { roomCode: string } }) {
@@ -27,56 +30,8 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
     activeCall,
     isLoading,
     error,
-    webrtcManager,
-    cleanup,
+    isP2PConnected,
   } = useCallStore()
-
-  const [socketInitialized, setSocketInitialized] = useState(false)
-
-  // Set up Socket.io event listeners
-  useEffect(() => {
-    if (socketInitialized) return
-
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      router.push('/login')
-      return
-    }
-
-    const callSocket = getCallSocket()
-    callSocket.connect(token)
-
-    // Register call event handlers (merge with existing, don't replace)
-    callSocket.on({
-      onCallAnswered: (data) => {
-        useCallStore.getState().handleCallAnswered(data)
-      },
-      onIceCandidate: (data) => {
-        useCallStore.getState().handleIceCandidate(data)
-      },
-      onCallEnded: (data) => {
-        useCallStore.getState().handleCallEnded(data)
-        router.push('/map')
-      },
-      onCallRejected: (data) => {
-        useCallStore.getState().handleCallRejected(data)
-        router.push('/map')
-      },
-      onParticipantMediaChanged: (data) => {
-        useCallStore.getState().handleParticipantMediaChanged(data)
-      },
-      onCallUserUnavailable: (data) => {
-        useCallStore.getState().handleUserUnavailable(data)
-        router.push('/map')
-      },
-    })
-
-    setSocketInitialized(true)
-
-    return () => {
-      // Don't disconnect here, let the store handle it
-    }
-  }, [router, socketInitialized])
 
   // Attach local stream to video element
   useEffect(() => {
@@ -92,10 +47,9 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
     }
   }, [remoteStream])
 
-  // Redirect if no active call
+  // Redirect to map if no active call
   useEffect(() => {
     if (!isLoading && !activeCall && !error) {
-      // Check if room code matches params
       const checkRoom = async () => {
         try {
           const { callsApi } = await import('@/lib/api')
@@ -114,7 +68,6 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Read current state from store to avoid stale closure
       const currentState = useCallStore.getState()
       if (currentState.activeCall?.room_code === params.roomCode) {
         currentState.cleanup()
@@ -138,6 +91,13 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
           {error}
         </div>
       )}
+
+      {/* Connection status indicator */}
+      <div className="absolute top-2 right-2 z-40">
+        <div className={`px-2 py-1 rounded text-xs ${isP2PConnected ? 'bg-green-600 text-white' : 'bg-yellow-600 text-white'}`}>
+          {isP2PConnected ? 'P2P Connected' : 'Connecting...'}
+        </div>
+      </div>
 
       {/* Video area */}
       <div className="flex-1 relative">
