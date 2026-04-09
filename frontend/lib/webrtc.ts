@@ -28,18 +28,44 @@ export class WebRTCManager {
 
   constructor(config?: WebRTCConfig) {
     this.config = config || {
-      iceServers: this.getDefaultIceServers(),
+      iceServers: [],
     }
   }
 
+  /**
+   * Fetch ICE servers from Metered TURN API or fall back to static config.
+   * Call this before createPeerConnection().
+   */
+  async fetchIceServers(): Promise<void> {
+    const meteredUrl = process.env.NEXT_PUBLIC_METERED_TURN_URL
+
+    if (meteredUrl) {
+      try {
+        const response = await fetch(meteredUrl)
+        if (response.ok) {
+          const data = await response.json()
+          // Metered returns the iceServers array directly, or { iceServers: [...] }
+          const servers = Array.isArray(data) ? data : data.iceServers
+          if (servers && servers.length > 0) {
+            this.config = { iceServers: servers }
+            return
+          }
+        }
+      } catch {
+        // Fall through to static config
+      }
+    }
+
+    // Fallback: static STUN + TURN from env vars
+    this.config = { iceServers: this.getDefaultIceServers() }
+  }
+
   private getDefaultIceServers(): RTCIceServer[] {
-    // Default STUN servers
     const servers: RTCIceServer[] = [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
     ]
 
-    // Add TURN server if configured
     if (process.env.NEXT_PUBLIC_TURN_SERVER_URL) {
       servers.push({
         urls: process.env.NEXT_PUBLIC_TURN_SERVER_URL,

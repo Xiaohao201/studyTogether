@@ -91,6 +91,7 @@ export const useCallStore = create<CallState>((set, get) => ({
 
       // Initialize WebRTC
       const webrtcManager = new WebRTCManager()
+      await webrtcManager.fetchIceServers()
       const constraints = {
         audio: true,
         video: callType === 'video',
@@ -175,6 +176,7 @@ export const useCallStore = create<CallState>((set, get) => ({
 
       // Initialize WebRTC
       const webrtcManager = new WebRTCManager()
+      await webrtcManager.fetchIceServers()
       const constraints = {
         audio: true,
         video: callRoom.call_type === 'video',
