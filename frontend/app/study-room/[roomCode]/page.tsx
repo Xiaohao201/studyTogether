@@ -90,6 +90,12 @@ export default function StudyRoomPage() {
           router.push('/map')
         }
       },
+      onConnected: () => {
+        // Re-join room on reconnect
+        if (socketRegistered.current) {
+          callSocket.sendStudyRoomJoin({ roomCode }).catch(() => {})
+        }
+      },
     })
 
     // Emit join event (wait for connection)

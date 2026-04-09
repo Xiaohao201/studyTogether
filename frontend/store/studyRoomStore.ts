@@ -87,17 +87,29 @@ export const useStudyRoomStore = create<StudyRoomState>((set, get) => ({
         break_duration: breakDuration,
       })
 
-      // Send invite via socket
+      // Send invite via socket - with error handling
       const callSocket = getCallSocket()
       const { useAuthStore } = await import('./authStore')
       const username = useAuthStore.getState().user?.username ?? ''
 
-      await callSocket.sendStudyRoomInvite({
-        targetUserId,
-        roomCode: room.room_code,
-        subject: room.subject,
-        inviterUsername: username,
-      })
+      try {
+        await callSocket.sendStudyRoomInvite({
+          targetUserId,
+          roomCode: room.room_code,
+          subject: room.subject,
+          inviterUsername: username,
+        })
+      } catch (inviteError) {
+        // Socket invite failed but room was created - show warning
+        // The user can still share the room code manually
+        set({ error: '房间已创建，但邀请发送失败。对方可能不在线，请分享房间号邀请对方。' })
+        set({
+          currentRoom: room,
+          isHost: true,
+          isLoading: false,
+        })
+        return room
+      }
 
       set({
         currentRoom: room,
@@ -141,10 +153,11 @@ export const useStudyRoomStore = create<StudyRoomState>((set, get) => ({
     if (!currentRoom) return
 
     try {
+      // REST first to ensure DB is updated before notifying others
+      await studyRoomsApi.endStudyRoom(currentRoom.room_code)
+
       const callSocket = getCallSocket()
       callSocket.sendStudyRoomEnd({ roomCode: currentRoom.room_code })
-
-      await studyRoomsApi.endStudyRoom(currentRoom.room_code)
       get().cleanup()
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to end study room' })
@@ -156,10 +169,11 @@ export const useStudyRoomStore = create<StudyRoomState>((set, get) => ({
     if (!currentRoom) return
 
     try {
+      // REST first to ensure DB is updated before notifying others
+      await studyRoomsApi.leaveStudyRoom(currentRoom.room_code)
+
       const callSocket = getCallSocket()
       callSocket.sendStudyRoomLeave({ roomCode: currentRoom.room_code })
-
-      await studyRoomsApi.leaveStudyRoom(currentRoom.room_code)
       get().cleanup()
     } catch (error: any) {
       set({ error: error.response?.data?.detail || 'Failed to leave study room' })
@@ -281,8 +295,13 @@ export const useStudyRoomStore = create<StudyRoomState>((set, get) => ({
   },
 
   handleInviteRejected: () => {
-    // Host's invite was rejected
-    set({ error: '学习邀请被拒绝' })
+    // Host's invite was rejected - clean up room state
+    set({
+      error: '学习邀请被拒绝',
+      currentRoom: null,
+      isHost: false,
+      timerState: null,
+    })
   },
 
   handleParticipantLeft: (data) => {

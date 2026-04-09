@@ -45,6 +45,7 @@ export interface CallSocketCallbacks {
   onTimerPhaseChanged?: (data: TimerPhaseChanged) => void
   onStudyRoomMessage?: (data: StudyRoomMessageData) => void
   onStudyInviteFailed?: (data: { roomCode: string; reason: string }) => void
+  onStudyRoomParticipantDisconnected?: (data: { roomCode: string; userId: string }) => void
   // Connection
   onConnected?: () => void
   onDisconnected?: () => void
@@ -214,6 +215,11 @@ class CallSocketManager {
     this.socket.on('study-invite-failed', (data: { roomCode: string; reason: string }) => {
       console.log('[CallSocket] Study invite failed:', data)
       this.callbacks.onStudyInviteFailed?.(data)
+    })
+
+    this.socket.on('study-room-participant-disconnected', (data: { roomCode: string; userId: string }) => {
+      console.log('[CallSocket] Study room participant disconnected:', data)
+      this.callbacks.onStudyRoomParticipantDisconnected?.(data)
     })
   }
 

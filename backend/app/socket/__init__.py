@@ -83,12 +83,63 @@ async def disconnect(sid):
     """
     Handle client disconnection.
 
+    Notifies study room participants when a user disconnects.
+
     Args:
         sid: Socket session ID
     """
     user_id = connected_users.pop(sid, None)
     if user_id:
         logger.info(f"[Socket] User {user_id} disconnected (sid={sid})")
+
+        # Notify study room participants about disconnect
+        try:
+            import uuid as uuid_mod
+            from app.services.study_room_service import StudyRoomService
+            from app.core.database import AsyncSessionLocal
+            from sqlalchemy import select, and_
+            from app.models.study_room import StudyRoom, StudyRoomParticipant
+
+            async with AsyncSessionLocal() as db:
+                service = StudyRoomService(db)
+                active_participations = await db.execute(
+                    select(StudyRoomParticipant)
+                    .join(StudyRoom)
+                    .where(
+                        and_(
+                            StudyRoomParticipant.user_id == uuid_mod.UUID(user_id),
+                            StudyRoomParticipant.left_at.is_(None),
+                            StudyRoom.room_status.in_(['active', 'waiting']),
+                        )
+                    )
+                )
+                participations = active_participations.scalars().all()
+
+                for participation in participations:
+                    room_result = await db.execute(
+                        select(StudyRoom).where(StudyRoom.id == participation.study_room_id)
+                    )
+                    room = room_result.scalar_one_or_none()
+                    if not room:
+                        continue
+
+                    # Get other participants
+                    p_user_ids = await service.get_participant_user_ids(room.room_code)
+                    for uid in p_user_ids:
+                        if uid != str(user_id):
+                            other_sid = None
+                            for s, u in connected_users.items():
+                                if u == uid:
+                                    other_sid = s
+                                    break
+                            if other_sid:
+                                await sio.emit('study-room-participant-disconnected', {
+                                    'roomCode': room.room_code,
+                                    'userId': str(user_id),
+                                }, to=other_sid)
+
+        except Exception as e:
+            logger.error(f"[Socket] Error notifying study room participants on disconnect: {e}")
 
 
 def get_socket_app() -> AsyncServer:

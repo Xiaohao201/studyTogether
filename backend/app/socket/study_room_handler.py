@@ -1,7 +1,9 @@
 """Socket.io event handlers for study room collaboration and Pomodoro timer."""
 
 import asyncio
+import html
 import logging
+import re
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -17,6 +19,19 @@ _timer_states: Dict[str, Dict[str, Any]] = {}
 # Background timer tasks per room: { room_code: asyncio.Task }
 _timer_tasks: Dict[str, asyncio.Task] = {}
 
+# Maximum message length to prevent abuse
+MAX_MESSAGE_LENGTH = 2000
+
+# Valid room code pattern: 8 alphanumeric uppercase characters
+ROOM_CODE_PATTERN = re.compile(r'^[A-Z0-9]{8}$')
+
+
+def _validate_room_code(room_code: str) -> bool:
+    """Validate room code format to prevent injection."""
+    if not room_code or not isinstance(room_code, str):
+        return False
+    return bool(ROOM_CODE_PATTERN.match(room_code))
+
 
 def get_user_sid(user_id: str) -> Optional[str]:
     """Get socket session ID for a user."""
@@ -24,6 +39,31 @@ def get_user_sid(user_id: str) -> Optional[str]:
         if uid == user_id:
             return sid
     return None
+
+
+def sanitize_message(content: str) -> str:
+    """Sanitize chat message content to prevent XSS."""
+    # Strip leading/trailing whitespace
+    content = content.strip()
+    # Truncate to max length
+    content = content[:MAX_MESSAGE_LENGTH]
+    # Escape HTML entities
+    content = html.escape(content, quote=True)
+    # Remove null bytes
+    content = content.replace('\x00', '')
+    # Collapse excessive whitespace/newlines (max 3 consecutive newlines)
+    content = re.sub(r'\n{4,}', '\n\n\n', content)
+    return content
+
+
+async def _is_room_host(room_code: str, user_id: str) -> bool:
+    """Check if the user is the host of the room."""
+    async with AsyncSessionLocal() as db:
+        service = StudyRoomService(db)
+        room = await service.get_study_room_by_code(room_code)
+        if not room:
+            return False
+        return str(room.host_id) == user_id
 
 
 async def _broadcast_timer_state(room_code: str) -> None:
@@ -123,10 +163,13 @@ async def study_room_invite(sid: str, data: Dict[str, Any]):
         target_user_id = data.get('targetUserId')
         room_code = data.get('roomCode')
         subject = data.get('subject')
-        inviter_username = data.get('inviterUsername', '')
 
         if not target_user_id or not room_code:
             logger.warning(f"[StudyRoom] Invalid invite data from {sid}")
+            return
+
+        if not _validate_room_code(room_code):
+            logger.warning(f"[StudyRoom] Invalid room code format from {sid}")
             return
 
         target_sid = get_user_sid(target_user_id)
@@ -137,6 +180,19 @@ async def study_room_invite(sid: str, data: Dict[str, Any]):
                 'reason': 'User offline',
             }, to=sid)
             return
+
+        # Fetch inviter username from database (don't trust client data)
+        inviter_username = ''
+        async with AsyncSessionLocal() as db:
+            from app.models.user import User
+            from sqlalchemy import select
+            import uuid
+            result = await db.execute(
+                select(User.username).where(User.id == uuid.UUID(inviter_id))
+            )
+            row = result.scalar_one_or_none()
+            if row:
+                inviter_username = row
 
         await sio.emit('incoming-study-invite', {
             'inviterId': inviter_id,
@@ -163,6 +219,9 @@ async def study_room_accept(sid: str, data: Dict[str, Any]):
         inviter_id = data.get('inviterId')
 
         if not room_code or not inviter_id:
+            return
+
+        if not _validate_room_code(room_code):
             return
 
         # Activate the room (status -> active)
@@ -201,7 +260,7 @@ async def study_room_accept(sid: str, data: Dict[str, Any]):
 
 @sio.event
 async def study_room_reject(sid: str, data: Dict[str, Any]):
-    """Handle study room invite rejection."""
+    """Handle study room invite rejection. Cleans up the waiting room."""
     try:
         rejecter_id = connected_users.get(sid)
         if not rejecter_id:
@@ -213,15 +272,34 @@ async def study_room_reject(sid: str, data: Dict[str, Any]):
         if not room_code or not inviter_id:
             return
 
-        # Notify inviter
-        inviter_sid = get_user_sid(inviter_id)
+        if not _validate_room_code(room_code):
+            return
+
+        # Verify the rejecter is actually a participant in this room
+        async with AsyncSessionLocal() as db:
+            service = StudyRoomService(db)
+            is_member = await service.is_participant(room_code, rejecter_id)
+            if not is_member:
+                logger.warning(f"[StudyRoom] Non-member {rejecter_id} tried to reject invite for {room_code}")
+                return
+
+            # Get the actual host_id from the room to end it securely
+            room = await service.get_study_room_by_code(room_code)
+            if not room:
+                return
+
+            # End the room using the actual host_id from DB, not client-supplied value
+            await service.end_study_room(room_code, str(room.host_id))
+
+        # Notify inviter (using the verified host_id from room)
+        inviter_sid = get_user_sid(str(room.host_id))
         if inviter_sid:
             await sio.emit('study-invite-rejected', {
                 'roomCode': room_code,
                 'rejecterId': rejecter_id,
             }, to=inviter_sid)
 
-        logger.info(f"[StudyRoom] User {rejecter_id} rejected invite for room {room_code}")
+        logger.info(f"[StudyRoom] User {rejecter_id} rejected invite for room {room_code}, room cleaned up")
 
     except Exception as e:
         logger.error(f"[StudyRoom] Error handling reject: {e}")
@@ -237,6 +315,9 @@ async def study_room_join(sid: str, data: Dict[str, Any]):
 
         room_code = data.get('roomCode')
         if not room_code:
+            return
+
+        if not _validate_room_code(room_code):
             return
 
         # Verify participant
@@ -271,6 +352,9 @@ async def study_room_leave(sid: str, data: Dict[str, Any]):
         if not room_code:
             return
 
+        if not _validate_room_code(room_code):
+            return
+
         # Update participant in database
         async with AsyncSessionLocal() as db:
             service = StudyRoomService(db)
@@ -302,6 +386,9 @@ async def study_room_end(sid: str, data: Dict[str, Any]):
 
         room_code = data.get('roomCode')
         if not room_code:
+            return
+
+        if not _validate_room_code(room_code):
             return
 
         # End room in database (verifies host)
@@ -341,7 +428,12 @@ async def timer_start(sid: str, data: Dict[str, Any]):
             return
 
         room_code = data.get('roomCode')
-        if not room_code:
+        if not room_code or not _validate_room_code(room_code):
+            return
+
+        # Only host can control timer
+        if not await _is_room_host(room_code, user_id):
+            logger.warning(f"[StudyRoom] Non-host {user_id} tried to start timer in {room_code}")
             return
 
         timer_state = _timer_states.get(room_code)
@@ -369,7 +461,11 @@ async def timer_pause(sid: str, data: Dict[str, Any]):
             return
 
         room_code = data.get('roomCode')
-        if not room_code:
+        if not room_code or not _validate_room_code(room_code):
+            return
+
+        if not await _is_room_host(room_code, user_id):
+            logger.warning(f"[StudyRoom] Non-host {user_id} tried to pause timer in {room_code}")
             return
 
         timer_state = _timer_states.get(room_code)
@@ -392,12 +488,17 @@ async def timer_resume(sid: str, data: Dict[str, Any]):
             return
 
         room_code = data.get('roomCode')
-        if not room_code:
+        if not room_code or not _validate_room_code(room_code):
+            return
+
+        if not await _is_room_host(room_code, user_id):
+            logger.warning(f"[StudyRoom] Non-host {user_id} tried to resume timer in {room_code}")
             return
 
         timer_state = _timer_states.get(room_code)
         if timer_state:
             timer_state['isPaused'] = False
+            _start_timer_task(room_code)  # Ensure task is running
             await _broadcast_timer_state(room_code)
 
         logger.info(f"[StudyRoom] Timer resumed in room {room_code}")
@@ -415,7 +516,11 @@ async def timer_skip(sid: str, data: Dict[str, Any]):
             return
 
         room_code = data.get('roomCode')
-        if not room_code:
+        if not room_code or not _validate_room_code(room_code):
+            return
+
+        if not await _is_room_host(room_code, user_id):
+            logger.warning(f"[StudyRoom] Non-host {user_id} tried to skip timer in {room_code}")
             return
 
         timer_state = _timer_states.get(room_code)
@@ -442,6 +547,14 @@ async def study_room_message(sid: str, data: Dict[str, Any]):
         username = data.get('username', '')
 
         if not room_code or not content:
+            return
+
+        if not _validate_room_code(room_code):
+            return
+
+        # Sanitize message content
+        content = sanitize_message(content)
+        if not content:
             return
 
         # Save to database
@@ -475,5 +588,9 @@ async def study_room_message(sid: str, data: Dict[str, Any]):
 
 
 def register_study_room_handlers():
-    """Register all study room Socket.io event handlers."""
+    """Register all study room Socket.io event handlers.
+
+    Note: Handlers are auto-registered via @sio.event decorators on module import.
+    This function exists for explicit registration documentation and logging.
+    """
     logger.info("[StudyRoom] Socket.io event handlers registered")
