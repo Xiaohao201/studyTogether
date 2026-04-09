@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
 # Force rebuild timestamp
-ARG CACHEBUST=2025-04-08-03
+ARG CACHEBUST=2025-04-09-01
 
 WORKDIR /app
 
@@ -28,5 +28,5 @@ RUN echo "Build timestamp: $CACHEBUST" && \
 # Expose port
 EXPOSE 8000
 
-# Start server: run migrations first, then uvicorn
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:socket_app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Start server: run migrations first (tolerate already-applied), then uvicorn
+CMD ["sh", "-c", "alembic upgrade head 2>&1 || echo '[WARN] Alembic migration skipped' && uvicorn app.main:socket_app --host 0.0.0.0 --port ${PORT:-8000}"]

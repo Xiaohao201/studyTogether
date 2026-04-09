@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '003'
@@ -19,91 +18,116 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade database schema."""
+    """Upgrade database schema — idempotent."""
 
-    # Create study_rooms table
-    op.create_table(
-        'study_rooms',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('room_code', sa.String(20), nullable=False, unique=True),
-        sa.Column('host_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('subject', sa.String(100), nullable=True),
-        sa.Column('room_status', sa.String(20), nullable=False, server_default='waiting'),
-        sa.Column('focus_duration', sa.Integer(), nullable=False, server_default='25'),
-        sa.Column('break_duration', sa.Integer(), nullable=False, server_default='5'),
-        sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('NOW()')),
-    )
-    op.create_index('ix_study_rooms_id', 'study_rooms', ['id'])
-    op.create_index('ix_study_rooms_room_code', 'study_rooms', ['room_code'], unique=True)
-    op.create_index('ix_study_rooms_host_id', 'study_rooms', ['host_id'])
-    op.create_index('ix_study_rooms_status', 'study_rooms', ['room_status'])
+    conn = op.get_bind()
 
-    # Create study_room_participants table
-    op.create_table(
-        'study_room_participants',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('study_room_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('joined_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('NOW()')),
-        sa.Column('left_at', sa.DateTime(timezone=True), nullable=True),
-        sa.UniqueConstraint('study_room_id', 'user_id', name='uq_study_room_participant'),
-    )
-    op.create_index('ix_study_room_participants_id', 'study_room_participants', ['id'])
-    op.create_index('ix_study_room_participants_room_id', 'study_room_participants', ['study_room_id'])
-    op.create_index('ix_study_room_participants_user_id', 'study_room_participants', ['user_id'])
+    # Create study_rooms table if not exists
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS study_rooms (
+            id UUID PRIMARY KEY,
+            room_code VARCHAR(20) NOT NULL,
+            host_id UUID NOT NULL,
+            subject VARCHAR(100),
+            room_status VARCHAR(20) NOT NULL DEFAULT 'waiting',
+            focus_duration INTEGER NOT NULL DEFAULT 25,
+            break_duration INTEGER NOT NULL DEFAULT 5,
+            started_at TIMESTAMP WITH TIME ZONE,
+            ended_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        )
+    """))
 
-    # Create study_room_messages table
-    op.create_table(
-        'study_room_messages',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('study_room_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('content', sa.Text(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('NOW()')),
-    )
-    op.create_index('ix_study_room_messages_id', 'study_room_messages', ['id'])
-    op.create_index('ix_study_room_messages_room_id', 'study_room_messages', ['study_room_id'])
-    op.create_index('ix_study_room_messages_user_id', 'study_room_messages', ['user_id'])
-    op.create_index('ix_study_room_messages_created_at', 'study_room_messages', ['created_at'])
+    for idx_name, col in [
+        ('ix_study_rooms_id', 'id'),
+        ('ix_study_rooms_host_id', 'host_id'),
+        ('ix_study_rooms_status', 'room_status'),
+    ]:
+        conn.execute(sa.text(
+            f"CREATE INDEX IF NOT EXISTS {idx_name} ON study_rooms ({col})"
+        ))
+    conn.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_study_rooms_room_code ON study_rooms (room_code)"
+    ))
 
-    # Create foreign key constraints
-    op.create_foreign_key(
-        'fk_study_rooms_host_id',
-        'study_rooms', 'users',
-        ['host_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_study_room_participants_room_id',
-        'study_room_participants', 'study_rooms',
-        ['study_room_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_study_room_participants_user_id',
-        'study_room_participants', 'users',
-        ['user_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_study_room_messages_room_id',
-        'study_room_messages', 'study_rooms',
-        ['study_room_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_study_room_messages_user_id',
-        'study_room_messages', 'users',
-        ['user_id'], ['id'],
-        ondelete='CASCADE'
-    )
+    # Create study_room_participants table if not exists
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS study_room_participants (
+            id UUID PRIMARY KEY,
+            study_room_id UUID NOT NULL,
+            user_id UUID NOT NULL,
+            joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            left_at TIMESTAMP WITH TIME ZONE,
+            CONSTRAINT uq_study_room_participant UNIQUE (study_room_id, user_id)
+        )
+    """))
+
+    for idx_name, col in [
+        ('ix_study_room_participants_id', 'id'),
+        ('ix_study_room_participants_room_id', 'study_room_id'),
+        ('ix_study_room_participants_user_id', 'user_id'),
+    ]:
+        conn.execute(sa.text(
+            f"CREATE INDEX IF NOT EXISTS {idx_name} ON study_room_participants ({col})"
+        ))
+
+    # Create study_room_messages table if not exists
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS study_room_messages (
+            id UUID PRIMARY KEY,
+            study_room_id UUID NOT NULL,
+            user_id UUID NOT NULL,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        )
+    """))
+
+    for idx_name, col in [
+        ('ix_study_room_messages_id', 'id'),
+        ('ix_study_room_messages_room_id', 'study_room_id'),
+        ('ix_study_room_messages_user_id', 'user_id'),
+        ('ix_study_room_messages_created_at', 'created_at'),
+    ]:
+        conn.execute(sa.text(
+            f"CREATE INDEX IF NOT EXISTS {idx_name} ON study_room_messages ({col})"
+        ))
+
+    # Add foreign keys only if they don't exist
+    existing_fks = {
+        row[0] for row in conn.execute(sa.text(
+            "SELECT conname FROM pg_constraint WHERE contype = 'f'"
+        ))
+    }
+
+    if 'fk_study_rooms_host_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE study_rooms ADD CONSTRAINT fk_study_rooms_host_id "
+            "FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE"
+        ))
+    if 'fk_study_room_participants_room_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE study_room_participants ADD CONSTRAINT fk_study_room_participants_room_id "
+            "FOREIGN KEY (study_room_id) REFERENCES study_rooms(id) ON DELETE CASCADE"
+        ))
+    if 'fk_study_room_participants_user_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE study_room_participants ADD CONSTRAINT fk_study_room_participants_user_id "
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+        ))
+    if 'fk_study_room_messages_room_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE study_room_messages ADD CONSTRAINT fk_study_room_messages_room_id "
+            "FOREIGN KEY (study_room_id) REFERENCES study_rooms(id) ON DELETE CASCADE"
+        ))
+    if 'fk_study_room_messages_user_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE study_room_messages ADD CONSTRAINT fk_study_room_messages_user_id "
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+        ))
 
 
 def downgrade() -> None:
     """Downgrade database schema."""
-
     op.drop_table('study_room_messages')
     op.drop_table('study_room_participants')
     op.drop_table('study_rooms')

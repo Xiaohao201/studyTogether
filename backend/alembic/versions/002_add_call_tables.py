@@ -9,7 +9,6 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = '002'
@@ -19,77 +18,112 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade database schema."""
+    """Upgrade database schema — idempotent."""
 
-    # Create call_rooms table
-    op.create_table(
-        'call_rooms',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('room_code', sa.String(20), nullable=False, unique=True),
-        sa.Column('host_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('call_type', sa.Enum('voice', 'video', name='call_type'), nullable=False),
-        sa.Column('call_status', sa.Enum('initiated', 'ongoing', 'ended', 'rejected', name='call_status'), nullable=False, server_default='initiated'),
-        sa.Column('study_session_id', postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column('started_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('NOW()')),
-        sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('duration_seconds', sa.Integer(), nullable=True),
-    )
-    op.create_index('ix_call_rooms_id', 'call_rooms', ['id'])
-    op.create_index('ix_call_rooms_room_code', 'call_rooms', ['room_code'], unique=True)
-    op.create_index('ix_call_rooms_host_id', 'call_rooms', ['host_id'])
-    op.create_index('ix_call_rooms_status', 'call_rooms', ['call_status'])
-    op.create_index('ix_call_rooms_started_at', 'call_rooms', ['started_at'])
+    conn = op.get_bind()
 
-    # Create call_participants table
-    op.create_table(
-        'call_participants',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('call_room_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column('joined_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.text('NOW()')),
-        sa.Column('left_at', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('has_video', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('has_audio', sa.Boolean(), nullable=False, server_default='true'),
-    )
-    op.create_index('ix_call_participants_id', 'call_participants', ['id'])
-    op.create_index('ix_call_participants_call_room_id', 'call_participants', ['call_room_id'])
-    op.create_index('ix_call_participants_user_id', 'call_participants', ['user_id'])
-    op.create_index('ix_call_participants_call_user', 'call_participants', ['call_room_id', 'user_id'])
+    # Create ENUM types only if they don't exist
+    existing_enums = {
+        row[0] for row in conn.execute(
+            sa.text("SELECT typname FROM pg_type WHERE typtype = 'e'")
+        )
+    }
 
-    # Create foreign key constraints
-    op.create_foreign_key(
-        'fk_call_rooms_host_id',
-        'call_rooms', 'users',
-        ['host_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_call_rooms_study_session_id',
-        'call_rooms', 'study_sessions',
-        ['study_session_id'], ['id'],
-        ondelete='SET NULL'
-    )
-    op.create_foreign_key(
-        'fk_call_participants_call_room_id',
-        'call_participants', 'call_rooms',
-        ['call_room_id'], ['id'],
-        ondelete='CASCADE'
-    )
-    op.create_foreign_key(
-        'fk_call_participants_user_id',
-        'call_participants', 'users',
-        ['user_id'], ['id'],
-        ondelete='CASCADE'
-    )
+    if 'call_type' not in existing_enums:
+        conn.execute(sa.text(
+            "CREATE TYPE call_type AS ENUM ('voice', 'video')"
+        ))
+    if 'call_status' not in existing_enums:
+        conn.execute(sa.text(
+            "CREATE TYPE call_status AS ENUM ('initiated', 'ongoing', 'ended', 'rejected')"
+        ))
+
+    # Create call_rooms table if not exists
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS call_rooms (
+            id UUID PRIMARY KEY,
+            room_code VARCHAR(20) NOT NULL,
+            host_id UUID NOT NULL,
+            call_type call_type NOT NULL,
+            call_status call_status NOT NULL DEFAULT 'initiated',
+            study_session_id UUID,
+            started_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            ended_at TIMESTAMP WITH TIME ZONE,
+            duration_seconds INTEGER
+        )
+    """))
+
+    for idx_name, col in [
+        ('ix_call_rooms_id', 'id'),
+        ('ix_call_rooms_host_id', 'host_id'),
+        ('ix_call_rooms_status', 'call_status'),
+        ('ix_call_rooms_started_at', 'started_at'),
+    ]:
+        conn.execute(sa.text(
+            f"CREATE INDEX IF NOT EXISTS {idx_name} ON call_rooms ({col})"
+        ))
+    conn.execute(sa.text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ix_call_rooms_room_code ON call_rooms (room_code)"
+    ))
+
+    # Create call_participants table if not exists
+    conn.execute(sa.text("""
+        CREATE TABLE IF NOT EXISTS call_participants (
+            id UUID PRIMARY KEY,
+            call_room_id UUID NOT NULL,
+            user_id UUID NOT NULL,
+            joined_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            left_at TIMESTAMP WITH TIME ZONE,
+            has_video BOOLEAN NOT NULL DEFAULT true,
+            has_audio BOOLEAN NOT NULL DEFAULT true
+        )
+    """))
+
+    for idx_name, col in [
+        ('ix_call_participants_id', 'id'),
+        ('ix_call_participants_call_room_id', 'call_room_id'),
+        ('ix_call_participants_user_id', 'user_id'),
+    ]:
+        conn.execute(sa.text(
+            f"CREATE INDEX IF NOT EXISTS {idx_name} ON call_participants ({col})"
+        ))
+    conn.execute(sa.text(
+        "CREATE INDEX IF NOT EXISTS ix_call_participants_call_user "
+        "ON call_participants (call_room_id, user_id)"
+    ))
+
+    # Add foreign keys only if they don't exist
+    existing_fks = {
+        row[0] for row in conn.execute(sa.text(
+            "SELECT conname FROM pg_constraint WHERE contype = 'f'"
+        ))
+    }
+
+    if 'fk_call_rooms_host_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE call_rooms ADD CONSTRAINT fk_call_rooms_host_id "
+            "FOREIGN KEY (host_id) REFERENCES users(id) ON DELETE CASCADE"
+        ))
+    if 'fk_call_rooms_study_session_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE call_rooms ADD CONSTRAINT fk_call_rooms_study_session_id "
+            "FOREIGN KEY (study_session_id) REFERENCES study_sessions(id) ON DELETE SET NULL"
+        ))
+    if 'fk_call_participants_call_room_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE call_participants ADD CONSTRAINT fk_call_participants_call_room_id "
+            "FOREIGN KEY (call_room_id) REFERENCES call_rooms(id) ON DELETE CASCADE"
+        ))
+    if 'fk_call_participants_user_id' not in existing_fks:
+        conn.execute(sa.text(
+            "ALTER TABLE call_participants ADD CONSTRAINT fk_call_participants_user_id "
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+        ))
 
 
 def downgrade() -> None:
     """Downgrade database schema."""
-
-    # Drop tables
     op.drop_table('call_participants')
     op.drop_table('call_rooms')
-
-    # Drop enums
     op.execute('DROP TYPE IF EXISTS call_status')
     op.execute('DROP TYPE IF EXISTS call_type')
