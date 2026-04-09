@@ -49,10 +49,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db():
-    """Initialize database extensions.
+    """Initialize database extensions and ensure all tables exist.
 
-    Table creation is handled by Alembic (Dockerfile CMD: alembic upgrade head).
-    This function only checks/enables PostGIS and validates connectivity.
+    Alembic handles migrations (Dockerfile CMD), but as a safety net,
+    create_all with checkfirst=True only creates tables that are missing.
+    ENUM types are safe due to create_type=False on all model ENUMs.
     """
     from sqlalchemy import text
 
@@ -69,14 +70,15 @@ async def init_db():
         print(f"[WARNING] PostGIS not available: {e}")
         print("[INFO] Using decimal coordinates fallback")
 
-    # Validate database connectivity
+    # Safety net: create any tables that Alembic migrations may have missed.
+    # checkfirst=True (default) means existing tables are skipped.
+    # create_type=False on ENUM columns prevents duplicate type creation.
     try:
         async with engine.begin() as conn:
-            await conn.execute(text("SELECT 1"))
-        print("[INFO] Database connection validated")
+            await conn.run_sync(Base.metadata.create_all)
+        print("[INFO] Database tables verified")
     except Exception as e:
-        print(f"[ERROR] Database connection failed: {e}")
-        raise
+        print(f"[WARNING] Table verification had issues: {e}")
 
     return postgis_enabled
 
