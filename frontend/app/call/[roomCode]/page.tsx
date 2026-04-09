@@ -65,7 +65,7 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
       onParticipantMediaChanged: (data) => {
         useCallStore.getState().handleParticipantMediaChanged(data)
       },
-      onUserUnavailable: (data) => {
+      onCallUserUnavailable: (data) => {
         useCallStore.getState().handleUserUnavailable(data)
         router.push('/map')
       },
