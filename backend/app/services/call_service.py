@@ -44,97 +44,72 @@ class CallService:
         call_data: CallRoomCreate
     ) -> Optional[CallRoom]:
         """
-        Create a new call room and add both participants.
-
-        Args:
-            host_id: Host user UUID
-            call_data: Call creation data (target_user_id, call_type)
-
-        Returns:
-            Created CallRoom object with participants, or None if target user not found
+        Create a new call room and add both participants using raw SQL.
         """
-        import logging
-        log = logging.getLogger(__name__)
-
         # Verify target user exists
-        log.info("[CallService] Step 1: Looking up target user")
-        target_query = select(User).where(User.id == uuid.UUID(call_data.target_user_id))
-        target_result = await self.db.execute(target_query)
-        target_user = target_result.scalar_one_or_none()
-
-        if not target_user:
-            log.warning("[CallService] Target user not found")
+        from sqlalchemy import text
+        result = await self.db.execute(
+            text("SELECT id FROM users WHERE id = :uid"),
+            {"uid": call_data.target_user_id}
+        )
+        if not result.scalar_one_or_none():
             return None
 
-        log.info("[CallService] Step 2: Generating room code")
         # Generate unique room code
         room_code = self._generate_room_code()
-
-        # Ensure room code is unique
-        max_attempts = 10
-        for _ in range(max_attempts):
-            existing_query = select(CallRoom).where(CallRoom.room_code == room_code)
-            existing_result = await self.db.execute(existing_query)
-            if existing_result.scalar_one_or_none() is None:
+        for _ in range(10):
+            r = await self.db.execute(
+                text("SELECT id FROM call_rooms WHERE room_code = :code"),
+                {"code": room_code}
+            )
+            if r.scalar_one_or_none() is None:
                 break
             room_code = self._generate_room_code()
-        else:
-            return None
 
-        log.info("[CallService] Step 3: Creating CallRoom object")
-        # Create call room
-        call_room = CallRoom(
-            id=uuid.uuid4(),
-            room_code=room_code,
-            host_id=uuid.UUID(host_id),
-            call_type=call_data.call_type,
-            call_status='initiated',
-            started_at=datetime.utcnow(),
+        # Insert call room
+        room_id = uuid.uuid4()
+        await self.db.execute(
+            text(
+                "INSERT INTO call_rooms (id, room_code, host_id, call_type, call_status, started_at) "
+                "VALUES (:id, :code, :host, :ctype, 'initiated', NOW())"
+            ),
+            {
+                "id": str(room_id),
+                "code": room_code,
+                "host": host_id,
+                "ctype": call_data.call_type,
+            }
         )
 
-        log.info("[CallService] Step 4: Adding to session and flushing")
-        self.db.add(call_room)
-        await self.db.flush()  # Get the ID
+        # Insert participants
+        now = datetime.utcnow()
+        is_video = call_data.call_type == 'video'
+        for uid in [host_id, call_data.target_user_id]:
+            await self.db.execute(
+                text(
+                    "INSERT INTO call_participants "
+                    "(id, call_room_id, user_id, joined_at, has_video, has_audio) "
+                    "VALUES (:id, :room_id, :uid, :joined, :video, true)"
+                ),
+                {
+                    "id": str(uuid.uuid4()),
+                    "room_id": str(room_id),
+                    "uid": uid,
+                    "joined": now,
+                    "video": is_video,
+                }
+            )
 
-        log.info("[CallService] Step 5: Adding host participant")
-        # Add host as participant
-        host_participant = CallParticipant(
-            id=uuid.uuid4(),
-            call_room_id=call_room.id,
-            user_id=uuid.UUID(host_id),
-            joined_at=datetime.utcnow(),
-            has_video=(call_data.call_type == 'video'),
-            has_audio=True,
-        )
-        self.db.add(host_participant)
-
-        log.info("[CallService] Step 6: Adding target participant")
-        # Add target user as participant
-        target_participant = CallParticipant(
-            id=uuid.uuid4(),
-            call_room_id=call_room.id,
-            user_id=uuid.UUID(call_data.target_user_id),
-            joined_at=datetime.utcnow(),
-            has_video=(call_data.call_type == 'video'),
-            has_audio=True,
-        )
-        self.db.add(target_participant)
-
-        log.info("[CallService] Step 7: Committing to database")
         await self.db.commit()
-        log.info("[CallService] Step 8: Refreshing call_room")
-        await self.db.refresh(call_room)
 
-        # Load participants for response
-        log.info("[CallService] Step 9: Loading participants")
-        participants_query = select(CallParticipant).where(
-            CallParticipant.call_room_id == call_room.id
+        # Load the created room with participants
+        query = (
+            select(CallRoom)
+            .where(CallRoom.id == room_id)
+            .options(selectinload(CallRoom.participants))
         )
-        participants_result = await self.db.execute(participants_query)
-        call_room.participants = list(participants_result.scalars().all())
-
-        log.info("[CallService] Step 10: Done, returning call room")
-        return call_room
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
 
     async def get_call_room_by_code(
         self,
