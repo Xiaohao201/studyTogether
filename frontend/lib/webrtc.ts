@@ -19,6 +19,7 @@ export class WebRTCManager {
   private localStream: MediaStream | null = null
   private remoteStream: MediaStream | null = null
   private dataChannel: RTCDataChannel | null = null
+  private pendingIceCandidates: RTCIceCandidateInit[] = []
 
   private config: WebRTCConfig
   private onIceCandidate?: (candidate: RTCIceCandidateInit) => void
@@ -156,6 +157,7 @@ export class WebRTCManager {
 
   /**
    * Set remote description (offer or answer).
+   * Flushes any buffered ICE candidates after setting.
    */
   async setRemoteDescription(desc: RTCSessionDescriptionInit): Promise<void> {
     if (!this.peerConnection) {
@@ -164,24 +166,39 @@ export class WebRTCManager {
 
     const description = new RTCSessionDescription(desc)
     await this.peerConnection.setRemoteDescription(description)
+
+    // Flush any ICE candidates that arrived before remote description
+    for (const candidate of this.pendingIceCandidates) {
+      try {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+      } catch {
+        // Individual candidate failures are non-fatal
+      }
+    }
+    this.pendingIceCandidates = []
   }
 
   /**
    * Add ICE candidate for NAT traversal.
+   * Buffers candidates if remote description is not yet set.
    */
   async addIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     if (!this.peerConnection) {
-      console.warn('[WebRTC] Cannot add ICE candidate: peer connection not ready')
       return
     }
 
     if (!this.peerConnection.remoteDescription) {
-      console.warn('[WebRTC] Cannot add ICE candidate: no remote description')
+      // Buffer for later — will be flushed after setRemoteDescription
+      this.pendingIceCandidates.push(candidate)
       return
     }
 
-    const iceCandidate = new RTCIceCandidate(candidate)
-    await this.peerConnection.addIceCandidate(iceCandidate)
+    try {
+      const iceCandidate = new RTCIceCandidate(candidate)
+      await this.peerConnection.addIceCandidate(iceCandidate)
+    } catch {
+      // Individual candidate failures are non-fatal
+    }
   }
 
   /**
@@ -311,6 +328,7 @@ export class WebRTCManager {
     }
 
     this.remoteStream = null
+    this.pendingIceCandidates = []
   }
 
   /**

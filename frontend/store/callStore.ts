@@ -96,7 +96,23 @@ export const useCallStore = create<CallState>((set, get) => ({
         video: callType === 'video',
       }
 
-      const localStream = await webrtcManager.initLocalStream(constraints)
+      let localStream: MediaStream
+      try {
+        localStream = await webrtcManager.initLocalStream(constraints)
+      } catch (mediaError: any) {
+        // Clean up the call room if media fails
+        try {
+          await callsApi.endCall(callRoom.id)
+        } catch { /* ignore cleanup error */ }
+        const msg = mediaError.name === 'NotAllowedError'
+          ? '请允许使用摄像头和麦克风权限后再发起通话'
+          : mediaError.name === 'NotFoundError'
+            ? '未找到摄像头或麦克风设备'
+            : '无法访问摄像头或麦克风，请检查设备'
+        set({ error: msg, isLoading: false })
+        return
+      }
+
       webrtcManager.createPeerConnection()
       webrtcManager.addLocalTracks()
 
@@ -126,6 +142,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       callSocket.sendCallOffer({
         targetUserId,
         roomCode: callRoom.room_code,
+        callType,
         offer,
       })
 
@@ -140,12 +157,10 @@ export const useCallStore = create<CallState>((set, get) => ({
         isLoading: false,
       })
     } catch (error: any) {
-      console.error('[CallStore] Error initiating call:', error)
       set({
-        error: error.response?.data?.detail || 'Failed to initiate call',
+        error: error.response?.data?.detail || '发起通话失败',
         isLoading: false,
       })
-      throw error
     }
   },
 
@@ -165,7 +180,22 @@ export const useCallStore = create<CallState>((set, get) => ({
         video: callRoom.call_type === 'video',
       }
 
-      const localStream = await webrtcManager.initLocalStream(constraints)
+      let localStream: MediaStream
+      try {
+        localStream = await webrtcManager.initLocalStream(constraints)
+      } catch (mediaError: any) {
+        // Reject call if media access fails
+        const callSocket = getCallSocket()
+        callSocket.sendCallReject({ callerId: offer.callerId, roomCode: offer.roomCode })
+        const msg = mediaError.name === 'NotAllowedError'
+          ? '请允许使用摄像头和麦克风权限后再接听通话'
+          : mediaError.name === 'NotFoundError'
+            ? '未找到摄像头或麦克风设备'
+            : '无法访问摄像头或麦克风，请检查设备'
+        set({ error: msg, isLoading: false, incomingCall: null })
+        return
+      }
+
       webrtcManager.createPeerConnection()
       webrtcManager.addLocalTracks()
 
@@ -213,12 +243,10 @@ export const useCallStore = create<CallState>((set, get) => ({
         isLoading: false,
       })
     } catch (error: any) {
-      console.error('[CallStore] Error answering call:', error)
       set({
-        error: error.response?.data?.detail || 'Failed to answer call',
+        error: error.response?.data?.detail || '接听通话失败',
         isLoading: false,
       })
-      throw error
     }
   },
 
@@ -332,24 +360,33 @@ export const useCallStore = create<CallState>((set, get) => ({
   },
 
   endCall: async () => {
-    const { activeCall, webrtcManager, cleanup } = get()
+    const { activeCall, cleanup } = get()
 
     if (!activeCall) {
       return
     }
 
-    try {
-      // End call via API
-      await callsApi.endCall(activeCall.id)
+    const roomCode = activeCall.room_code
+    const callId = activeCall.id
+    const hostId = activeCall.host_id
 
-      // Send end signal via socket
+    try {
+      // REST first to ensure DB is updated
+      await callsApi.endCall(callId)
+
+      // Then notify via socket
       const callSocket = getCallSocket()
       callSocket.sendCallEnded({
-        roomCode: activeCall.room_code,
-        userId: activeCall.host_id,
+        roomCode,
+        userId: hostId,
       })
-    } catch (error) {
-      console.error('[CallStore] Error ending call:', error)
+    } catch {
+      // Still try to notify even if REST fails
+      const callSocket = getCallSocket()
+      callSocket.sendCallEnded({
+        roomCode,
+        userId: hostId,
+      })
     } finally {
       cleanup()
     }
@@ -368,9 +405,16 @@ export const useCallStore = create<CallState>((set, get) => ({
       webrtcManager.close()
     }
 
-    // Clear socket callbacks (map page will re-register on remount)
+    // Clear only call-specific callbacks, preserve other handlers (study room, etc.)
     const callSocket = getCallSocket()
-    callSocket.clearCallbacks()
+    callSocket.on({
+      onCallAnswered: undefined,
+      onIceCandidate: undefined,
+      onCallEnded: undefined,
+      onCallRejected: undefined,
+      onParticipantMediaChanged: undefined,
+      onCallUserUnavailable: undefined,
+    })
 
     set({
       activeCall: null,

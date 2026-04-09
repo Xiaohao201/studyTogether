@@ -167,6 +167,7 @@ export interface CallEnd {
 export interface CallOfferData {
   targetUserId: string
   roomCode: string
+  callType?: CallType
   offer: RTCSessionDescriptionInit
 }
 
@@ -184,6 +185,7 @@ export interface IceCandidateData {
 export interface IncomingCallOfferData {
   callerId: string
   roomCode: string
+  callType?: CallType
   offer: RTCSessionDescriptionInit
 }
 

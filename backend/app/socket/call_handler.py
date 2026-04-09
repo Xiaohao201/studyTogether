@@ -51,6 +51,7 @@ async def call_offer(sid: str, data: Dict[str, Any]):
         target_user_id = data.get('targetUserId')
         room_code = data.get('roomCode')
         offer = data.get('offer')
+        call_type = data.get('callType', 'voice')
 
         if not target_user_id or not room_code or not offer:
             logger.warning(f"[Call] Invalid call_offer data: {data}")
@@ -68,12 +69,13 @@ async def call_offer(sid: str, data: Dict[str, Any]):
             )
             return
 
-        # Forward offer to target user
+        # Forward offer to target user with call type
         await sio.emit(
             'incoming-call-offer',
             {
                 'callerId': caller_id,
                 'roomCode': room_code,
+                'callType': call_type,
                 'offer': offer
             },
             to=target_sid
@@ -107,6 +109,13 @@ async def call_answer(sid: str, data: Dict[str, Any]):
         if not caller_id or not room_code or not answer:
             logger.warning(f"[Call] Invalid call_answer data: {data}")
             return
+
+        # Update call status to 'ongoing'
+        async for db in get_db():
+            call_service = CallService(db)
+            call_room = await call_service.get_call_room_by_code(room_code)
+            if call_room and call_room.call_status == 'initiated':
+                await call_service.update_call_status(str(call_room.id), 'ongoing')
 
         # Find caller's socket
         caller_sid = get_user_sid(caller_id)

@@ -46,8 +46,8 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
     const callSocket = getCallSocket()
     callSocket.connect(token)
 
-    // Register call event handlers (replace map page handlers)
-    callSocket.replaceCallbacks({
+    // Register call event handlers (merge with existing, don't replace)
+    callSocket.on({
       onCallAnswered: (data) => {
         useCallStore.getState().handleCallAnswered(data)
       },
@@ -114,12 +114,13 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (activeCall?.room_code === params.roomCode) {
-        cleanup()
+      // Read current state from store to avoid stale closure
+      const currentState = useCallStore.getState()
+      if (currentState.activeCall?.room_code === params.roomCode) {
+        currentState.cleanup()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [params.roomCode])
 
   // Redirect to map if call ended
   if (!activeCall && !isLoading) {

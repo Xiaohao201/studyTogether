@@ -246,13 +246,16 @@ class CallSocketManager {
 
   /**
    * Send call offer to target user.
+   * Waits for socket connection before sending.
    */
-  sendCallOffer(data: CallOfferData): void {
-    if (!this.socket?.connected) {
-      console.error('[CallSocket] Not connected')
-      return
+  async sendCallOffer(data: CallOfferData): Promise<void> {
+    try {
+      await this.waitForConnection()
+      this.socket!.emit('call_offer', data)
+    } catch (e) {
+      console.error('[CallSocket] sendCallOffer failed:', e)
+      throw e
     }
-    this.socket.emit('call_offer', data)
   }
 
   /**

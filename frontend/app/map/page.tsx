@@ -75,7 +75,7 @@ export default function MapPage() {
         useCallStore.getState().setIncomingCall({
           callerId: data.callerId,
           roomCode: data.roomCode,
-          callType: 'voice', // default; answerCall fetches real type from API
+          callType: data.callType || 'voice',
           offer: data,
         });
       },
