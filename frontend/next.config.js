@@ -34,8 +34,8 @@ const nextConfig = {
   },
 };
 
-// Force rebuild to pickup Railway environment variables
-// Build timestamp: 2025-04-07-11-15
+// Force rebuild: fix fallback URLs and nearby users filter
+// Build timestamp: 2025-04-08-03
 // CORS fix deployment - Allow all origins
 // Production backend: https://studytogether-production.up.railway.app
 

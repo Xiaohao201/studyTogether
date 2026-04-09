@@ -67,7 +67,7 @@ class CallSocketManager {
 
     this.token = token
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app'
 
     this.socket = io(`${backendUrl}/socket.io`, {
       auth: { token },

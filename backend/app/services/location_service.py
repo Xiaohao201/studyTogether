@@ -190,11 +190,12 @@ class LocationService:
         user_lng_rad = sql_func.radians(UserLocation.fuzzy_longitude)
 
         # Calculate distance using spherical law of cosines (Haversine-like formula)
-        distance_km_expr = sql_func.acos(
-            sql_func.sin(center_lat_rad) * sql_func.sin(user_lat_rad) +
-            sql_func.cos(center_lat_rad) * sql_func.cos(user_lat_rad) *
+        # Clamp inner expression to [-1, 1] to avoid acos domain errors from float precision
+        cos_angle = sql_func.sin(center_lat_rad) * sql_func.sin(user_lat_rad) + \
+            sql_func.cos(center_lat_rad) * sql_func.cos(user_lat_rad) * \
             sql_func.cos(center_lng_rad - user_lng_rad)
-        ) * earth_radius_km
+        cos_angle_clamped = sql_func.greatest(-1.0, sql_func.least(1.0, cos_angle))
+        distance_km_expr = sql_func.acos(cos_angle_clamped) * earth_radius_km
 
         # Convert to meters
         distance_meters_expr = distance_km_expr * 1000
@@ -214,7 +215,7 @@ class LocationService:
             )
             .where(User.privacy_mode.in_(privacy_filter))
             .where(distance_meters_expr <= radius_meters)
-            .where(User.status == 'studying')
+            .where(User.status.in_(['studying', 'break']))
             .order_by('distance_meters')
             .limit(100)
         )

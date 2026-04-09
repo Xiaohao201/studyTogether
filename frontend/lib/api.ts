@@ -3,7 +3,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 import type { ApiResponse, AuthResponse, LoginCredentials, RegisterData, User } from '../types';
 
 // API base URL from environment
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app';
 
 // Create axios instance
 export const api = axios.create({

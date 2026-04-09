@@ -9,6 +9,7 @@ interface LocationState {
   isTracking: boolean;
   isLoading: boolean;
   error: string | null;
+  _watchId: number | null;
 
   // Actions
   startTracking: () => void;
@@ -25,6 +26,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   isTracking: false,
   isLoading: false,
   error: null,
+  _watchId: null,
 
   startTracking: () => {
     set({ isTracking: true });
@@ -35,8 +37,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
       return;
     }
 
+    // Clear any existing watcher first
+    const existingWatchId = get()._watchId;
+    if (existingWatchId !== null) {
+      navigator.geolocation.clearWatch(existingWatchId);
+    }
+
     // Watch position changes
-    navigator.geolocation.watchPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         set({ currentLocation: { latitude, longitude } });
@@ -53,12 +61,15 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         maximumAge: 0,
       }
     );
+    set({ _watchId: watchId });
   },
 
   stopTracking: () => {
-    set({ isTracking: false });
-    // Note: Geolocation watchPosition will continue running
-    // To fully stop, you need to save the watchId and call navigator.geolocation.clearWatch(watchId)
+    const watchId = get()._watchId;
+    if (watchId !== null && typeof window !== 'undefined') {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    set({ isTracking: false, _watchId: null });
   },
 
   updateLocation: async (latitude: number, longitude: number) => {
@@ -74,11 +85,8 @@ export const useLocationStore = create<LocationState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const users = await locationsApi.findNearby(latitude, longitude, radiusKm);
-      console.log('[DEBUG] Fetched nearby users:', users);
-      console.log('[DEBUG] Number of users:', users.length);
       set({ nearbyUsers: users, isLoading: false });
     } catch (error: any) {
-      console.error('[DEBUG] Failed to fetch nearby users:', error);
       set({
         error: error.response?.data?.detail || 'Failed to fetch nearby users',
         isLoading: false,

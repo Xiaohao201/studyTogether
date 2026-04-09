@@ -125,11 +125,13 @@ export default function MapPage() {
     }
   }, [isAuthenticated, isTracking]);
 
-  // Fetch nearby users when location updates
+  // Fetch nearby users when location updates (debounced)
   useEffect(() => {
-    if (currentLocation) {
+    if (!currentLocation) return;
+    const timer = setTimeout(() => {
       fetchNearbyUsers(currentLocation.latitude, currentLocation.longitude, 5);
-    }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [currentLocation]);
 
   // Fetch active session on mount
