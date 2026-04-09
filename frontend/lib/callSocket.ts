@@ -74,10 +74,41 @@ class CallSocketManager {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
     })
 
     this.setupEventHandlers()
+  }
+
+  /**
+   * Wait for socket connection (resolves immediately if already connected).
+   */
+  private waitForConnection(timeoutMs = 5000): Promise<void> {
+    if (this.socket?.connected) {
+      return Promise.resolve()
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error('Socket not initialized'))
+        return
+      }
+
+      const timer = setTimeout(() => {
+        reject(new Error('Socket connection timed out'))
+      }, timeoutMs)
+
+      this.socket.once('connect', () => {
+        clearTimeout(timer)
+        resolve()
+      })
+
+      // If already in connecting state, the 'connect' event will fire.
+      // If not connected at all, trigger a connect.
+      if (!this.socket.connected && this.token) {
+        this.socket.connect()
+      }
+    })
   }
 
   /**
@@ -282,17 +313,18 @@ class CallSocketManager {
   /**
    * Send study room invite.
    */
-  sendStudyRoomInvite(data: {
+  async sendStudyRoomInvite(data: {
     targetUserId: string
     roomCode: string
     subject: string | null
     inviterUsername: string
-  }): void {
-    if (!this.socket?.connected) {
-      console.error('[CallSocket] Not connected')
-      return
+  }): Promise<void> {
+    try {
+      await this.waitForConnection()
+      this.socket!.emit('study_room_invite', data)
+    } catch (e) {
+      console.error('[CallSocket] sendStudyRoomInvite failed:', e)
     }
-    this.socket.emit('study_room_invite', data)
   }
 
   /**
@@ -320,12 +352,13 @@ class CallSocketManager {
   /**
    * Join a study room page.
    */
-  sendStudyRoomJoin(data: { roomCode: string }): void {
-    if (!this.socket?.connected) {
-      console.error('[CallSocket] Not connected')
-      return
+  async sendStudyRoomJoin(data: { roomCode: string }): Promise<void> {
+    try {
+      await this.waitForConnection()
+      this.socket!.emit('study_room_join', data)
+    } catch (e) {
+      console.error('[CallSocket] sendStudyRoomJoin failed:', e)
     }
-    this.socket.emit('study_room_join', data)
   }
 
   /**

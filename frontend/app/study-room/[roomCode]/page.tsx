@@ -92,8 +92,8 @@ export default function StudyRoomPage() {
       },
     })
 
-    // Emit join event
-    callSocket.sendStudyRoomJoin({ roomCode })
+    // Emit join event (wait for connection)
+    callSocket.sendStudyRoomJoin({ roomCode }).catch(() => {})
 
     socketRegistered.current = true
 

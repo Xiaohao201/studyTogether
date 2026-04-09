@@ -92,7 +92,7 @@ export const useStudyRoomStore = create<StudyRoomState>((set, get) => ({
       const { useAuthStore } = await import('./authStore')
       const username = useAuthStore.getState().user?.username ?? ''
 
-      callSocket.sendStudyRoomInvite({
+      await callSocket.sendStudyRoomInvite({
         targetUserId,
         roomCode: room.room_code,
         subject: room.subject,
