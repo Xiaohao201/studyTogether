@@ -68,9 +68,24 @@ async def init_db():
 
     # Safety net: create any tables that Alembic migrations may have missed.
     # checkfirst=True (default) means existing tables are skipped.
-    # create_type=False on ENUM columns prevents duplicate type creation.
+    # Also fix any ENUM columns that should be String (e.g. call_rooms).
     try:
         async with engine.begin() as conn:
+            # Fix call_rooms ENUM columns to VARCHAR if they exist as ENUM
+            try:
+                await conn.execute(text(
+                    "ALTER TABLE call_rooms ALTER COLUMN call_type "
+                    "TYPE VARCHAR(10) USING call_type::text"
+                ))
+                await conn.execute(text(
+                    "ALTER TABLE call_rooms ALTER COLUMN call_status "
+                    "TYPE VARCHAR(20) USING call_status::text"
+                ))
+                print("[INFO] Converted call_rooms ENUM columns to VARCHAR")
+            except Exception as e:
+                # Table might not exist yet, or columns already VARCHAR
+                print(f"[INFO] call_rooms column conversion skipped: {e}")
+
             await conn.run_sync(Base.metadata.create_all)
         print("[INFO] Database tables verified")
     except Exception as e:
