@@ -57,7 +57,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6 bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md text-sm">
               {error}
@@ -75,7 +75,7 @@ export default function RegisterPage() {
                 data-testid="register-username"
                 type="text"
                 id="username"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                className="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                 placeholder="xiaoming"
               />
               {errors.username && (
@@ -93,7 +93,7 @@ export default function RegisterPage() {
                 data-testid="register-email"
                 type="email"
                 id="email"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                className="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                 placeholder="your@email.com"
               />
               {errors.email && (
@@ -111,7 +111,7 @@ export default function RegisterPage() {
                 data-testid="register-password"
                 type="password"
                 id="password"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                className="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                 placeholder="至少8个字符"
               />
               {errors.password && (
@@ -129,7 +129,7 @@ export default function RegisterPage() {
                 data-testid="register-confirm-password"
                 type="password"
                 id="confirmPassword"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
+                className="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white"
                 placeholder="再次输入密码"
               />
               {errors.confirmPassword && (
@@ -143,7 +143,7 @@ export default function RegisterPage() {
             type="submit"
             data-testid="register-submit"
             disabled={isLoading}
-            className="w-full"
+            className="w-full min-h-[48px]"
           >
             {isLoading ? '注册中...' : '注册'}
           </Button>

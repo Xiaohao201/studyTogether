@@ -91,20 +91,20 @@ export function IncomingCallDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md w-[calc(100%-2rem)]">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${
+              className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${
                 incomingCall.callType === 'video'
                   ? 'bg-blue-100 text-blue-600'
                   : 'bg-green-100 text-green-600'
               }`}
             >
               {incomingCall.callType === 'video' ? (
-                <Video className="h-6 w-6" />
+                <Video className="h-7 w-7" />
               ) : (
-                <Phone className="h-6 w-6" />
+                <Phone className="h-7 w-7" />
               )}
             </div>
             <div className="flex-1">
@@ -125,26 +125,26 @@ export function IncomingCallDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-3 sm:justify-center">
+        <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-center">
           <Button
             variant="outline"
             size="lg"
             onClick={handleReject}
-            className="flex-1 sm:flex-none"
+            className="w-full sm:w-auto min-h-[48px]"
           >
-            <X className="h-4 w-4 mr-2" />
+            <X className="h-5 w-5 mr-2" />
             Decline
           </Button>
           <Button
             size="lg"
             onClick={handleAnswer}
-            className={`flex-1 sm:flex-none ${
+            className={`w-full sm:w-auto min-h-[48px] ${
               incomingCall.callType === 'video'
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'bg-green-600 hover:bg-green-700'
             }`}
           >
-            <Phone className="h-4 w-4 mr-2" />
+            <Phone className="h-5 w-5 mr-2" />
             Answer
           </Button>
         </DialogFooter>

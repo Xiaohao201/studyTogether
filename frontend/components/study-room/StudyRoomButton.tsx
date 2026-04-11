@@ -42,6 +42,7 @@ export function StudyRoomButton({
         onClick={handleStudyTogether}
         disabled={isLoading}
         title={`邀请 ${username} 一起学习`}
+        className="min-h-[36px] touch-manipulation"
       >
         {isLoading ? '...' : '一起学习'}
       </Button>

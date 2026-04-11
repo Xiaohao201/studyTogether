@@ -55,7 +55,35 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Safe area padding for notched devices (iPhone X+) */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
+}
+
+/* Mobile touch optimizations */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+}
+
+/* Bottom sheet drag handle */
+.bottom-sheet-handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #d1d5db;
+  margin: 8px auto 4px;
+}
+
+/* Safe area bottom padding for fixed elements */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 /* AMap (Gaode Map) container */

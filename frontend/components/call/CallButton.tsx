@@ -52,8 +52,9 @@ export function CallButton({
           disabled={disabled || isLoading}
           onClick={() => handleInitiateCall('voice')}
           title={`Voice call ${username}`}
+          className="h-10 w-10 sm:h-auto sm:w-auto"
         >
-          <Phone className="h-4 w-4" />
+          <Phone className="h-5 w-5" />
         </Button>
         <Button
           size="icon"
@@ -61,8 +62,9 @@ export function CallButton({
           disabled={disabled || isLoading}
           onClick={() => handleInitiateCall('video')}
           title={`Video call ${username}`}
+          className="h-10 w-10 sm:h-auto sm:w-auto"
         >
-          <Video className="h-4 w-4" />
+          <Video className="h-5 w-5" />
         </Button>
       </div>
     )

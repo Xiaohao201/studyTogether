@@ -113,7 +113,7 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
 
             {/* Local video (picture-in-picture) */}
             {localStream && (
-              <div className="absolute bottom-24 right-4 w-48 h-36 bg-gray-900 rounded-lg overflow-hidden shadow-lg border-2 border-white">
+              <div className="absolute bottom-20 md:bottom-24 right-2 md:right-4 w-28 h-20 sm:w-32 sm:h-24 md:w-48 md:h-36 bg-gray-900 rounded-lg overflow-hidden shadow-lg border-2 border-white">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -142,20 +142,20 @@ export default function CallRoomPage({ params }: { params: { roomCode: string } 
       </div>
 
       {/* Call info bar */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4">
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-3 md:p-4 safe-top">
         <div className="flex items-center justify-between">
           <div className="text-white">
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-base md:text-lg font-semibold">
               {activeCall?.call_type === 'video' ? 'Video Call' : 'Voice Call'}
             </h2>
-            <p className="text-sm text-gray-300">Room: {params.roomCode}</p>
+            <p className="text-xs md:text-sm text-gray-300">Room: {params.roomCode}</p>
           </div>
           <CallTimer startTime={callStartTime} />
         </div>
       </div>
 
       {/* Call controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-6">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 md:p-6 safe-bottom">
         <CallControls />
       </div>
     </div>

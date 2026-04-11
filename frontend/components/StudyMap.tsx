@@ -63,7 +63,7 @@ export function StudyMap({
           map.addControl(new AMap.ControlBar({
             position: {
               top: '110px',
-              right: '40px',
+              right: '10px',
             },
           }));
 
@@ -101,8 +101,8 @@ export function StudyMap({
       // Create custom marker content
       const content = `
         <div class="custom-marker" style="cursor: pointer;">
-          <div style="width: 40px; height: 40px; background-color: #4f46e5; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-center;">
-            <svg style="width: 24px; height: 24px; color: white; margin: 8px;" fill="currentColor" viewBox="0 0 20 20">
+          <div style="width: 44px; height: 44px; background-color: #4f46e5; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 24px; height: 24px; color: white;" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
             </svg>
           </div>
@@ -113,7 +113,7 @@ export function StudyMap({
       const marker = new (window as any).AMap.Marker({
         position: [user.location.longitude, user.location.latitude],
         content: content,
-        offset: new (window as any).AMap.Pixel(-20, -40),
+        offset: new (window as any).AMap.Pixel(-22, -44),
         title: user.username,
       });
 
@@ -124,14 +124,14 @@ export function StudyMap({
 
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: `
-          <div style="padding: 12px; min-width: 200px;">
-            <h3 style="font-weight: bold; font-size: 18px; margin: 0 0 8px 0;">${user.username}</h3>
+          <div style="padding: 12px; min-width: 180px; max-width: 280px;">
+            <h3 style="font-weight: bold; font-size: 16px; margin: 0 0 8px 0;">${user.username}</h3>
             <p style="font-size: 14px; color: #666; margin: 4px 0;">${user.subject || '未设置科目'}</p>
             <p style="font-size: 14px; color: #999; margin: 4px 0;">距离: ${distanceText}</p>
             ${user.city ? `<p style="font-size: 12px; color: #999; margin: 4px 0;">${user.city}</p>` : ''}
           </div>
         `,
-        offset: new (window as any).AMap.Pixel(0, -40),
+        offset: new (window as any).AMap.Pixel(0, -44),
       });
 
       // Add click handler
@@ -157,8 +157,8 @@ export function StudyMap({
       // Create user's own location marker
       const content = `
         <div class="user-marker">
-          <div style="width: 32px; height: 32px; background-color: #22c55e; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-center;">
-            <svg style="width: 16px; height: 16px; color: white; margin: 8px;" fill="currentColor" viewBox="0 0 20 20">
+          <div style="width: 36px; height: 36px; background-color: #22c55e; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center;">
+            <svg style="width: 18px; height: 18px; color: white;" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
             </svg>
           </div>
@@ -168,14 +168,14 @@ export function StudyMap({
       const marker = new (window as any).AMap.Marker({
         position: [currentLocation.longitude, currentLocation.latitude],
         content: content,
-        offset: new (window as any).AMap.Pixel(-16, -32),
+        offset: new (window as any).AMap.Pixel(-18, -36),
         title: '你的位置',
         zIndex: 999,
       });
 
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: '<div style="padding: 8px;"><p style="font-weight: bold; margin: 0;">你的位置</p></div>',
-        offset: new (window as any).AMap.Pixel(0, -32),
+        offset: new (window as any).AMap.Pixel(0, -36),
       });
 
       marker.on('click', () => {

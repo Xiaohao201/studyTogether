@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { useStudyRoomStore } from '@/store/studyRoomStore'
@@ -16,10 +16,13 @@ import type {
   StudyRoomEnded,
 } from '@/types'
 
+type MobileTab = 'timer' | 'chat' | 'participants'
+
 export default function StudyRoomPage() {
   const router = useRouter()
   const params = useParams()
   const roomCode = params.roomCode as string
+  const [mobileTab, setMobileTab] = useState<MobileTab>('timer')
 
   const { user, isAuthenticated } = useAuthStore()
   const {
@@ -160,12 +163,18 @@ export default function StudyRoomPage() {
     )
   }
 
+  const tabs: { key: MobileTab; label: string }[] = [
+    { key: 'timer', label: '计时器' },
+    { key: 'chat', label: '聊天' },
+    { key: 'participants', label: '参与者' },
+  ]
+
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-3 md:px-4 py-2 md:py-3 safe-top">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             <button
               onClick={() => router.push('/map')}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -173,19 +182,19 @@ export default function StudyRoomPage() {
               ← 返回
             </button>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
                 学习房间
               </h1>
               {currentRoom?.subject && (
-                <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                <p className="text-xs md:text-sm text-indigo-600 dark:text-indigo-400">
                   {currentRoom.subject}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <span className="text-xs text-gray-400">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <span className="text-xs text-gray-400 hidden md:inline">
               房间号: {roomCode}
             </span>
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
@@ -198,24 +207,24 @@ export default function StudyRoomPage() {
             {isHost ? (
               <button
                 onClick={handleEndRoom}
-                className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+                className="px-2 md:px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
               >
-                结束房间
+                结束
               </button>
             ) : (
               <button
                 onClick={handleLeaveRoom}
-                className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="px-2 md:px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
-                离开房间
+                离开
               </button>
             )}
           </div>
         </div>
       </header>
 
-      {/* Main content: Timer + Chat + Participants */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Desktop: Three-column layout */}
+      <div className="hidden md:flex flex-1 overflow-hidden">
         {/* Left: Timer */}
         <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center p-6">
           <PomodoroTimer />
@@ -236,6 +245,54 @@ export default function StudyRoomPage() {
         {/* Right: Participants */}
         <div className="w-1/3 p-4 overflow-y-auto">
           <ParticipantList />
+        </div>
+      </div>
+
+      {/* Mobile: Single panel with bottom tab bar */}
+      <div className="md:hidden flex-1 overflow-hidden flex flex-col">
+        {/* Active panel content */}
+        <div className="flex-1 overflow-hidden">
+          {mobileTab === 'timer' && (
+            <div className="h-full flex flex-col items-center justify-center p-4">
+              <PomodoroTimer />
+            </div>
+          )}
+          {mobileTab === 'chat' && (
+            <div className="h-full flex flex-col">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  聊天
+                </h2>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <ChatPanel />
+              </div>
+            </div>
+          )}
+          {mobileTab === 'participants' && (
+            <div className="h-full p-4 overflow-y-auto">
+              <ParticipantList />
+            </div>
+          )}
+        </div>
+
+        {/* Bottom tab bar */}
+        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-bottom">
+          <div className="flex min-h-[48px]">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setMobileTab(tab.key)}
+                className={`flex-1 py-3 text-sm font-medium text-center transition-colors touch-manipulation ${
+                  mobileTab === tab.key
+                    ? 'text-indigo-600 dark:text-indigo-400 border-t-2 border-indigo-600 dark:border-indigo-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

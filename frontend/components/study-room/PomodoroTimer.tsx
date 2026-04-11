@@ -20,7 +20,7 @@ export function PomodoroTimer() {
         {isHost && (
           <button
             onClick={startTimer}
-            className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="mt-4 px-6 py-3 min-h-[48px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors touch-manipulation"
           >
             开始专注
           </button>
@@ -50,8 +50,8 @@ export function PomodoroTimer() {
       </div>
 
       {/* Circular timer */}
-      <div className={`relative w-48 h-48 rounded-full border-8 ${ringColor} flex items-center justify-center mb-4`}>
-        <div className="text-4xl font-mono font-bold text-gray-900 dark:text-white">
+      <div className={`relative w-40 h-40 sm:w-48 sm:h-48 rounded-full border-8 ${ringColor} flex items-center justify-center mb-4`}>
+        <div className="text-3xl sm:text-4xl font-mono font-bold text-gray-900 dark:text-white">
           {timeDisplay}
         </div>
       </div>
@@ -63,25 +63,25 @@ export function PomodoroTimer() {
 
       {/* Controls (host only) */}
       {isHost && (
-        <div className="flex space-x-3">
+        <div className="flex gap-3">
           {timerState.isPaused ? (
             <button
               onClick={resumeTimer}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+              className="px-5 py-3 min-h-[48px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm touch-manipulation"
             >
               继续
             </button>
           ) : (
             <button
               onClick={pauseTimer}
-              className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+              className="px-5 py-3 min-h-[48px] bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm touch-manipulation"
             >
               暂停
             </button>
           )}
           <button
             onClick={skipPhase}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+            className="px-5 py-3 min-h-[48px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm touch-manipulation"
           >
             跳过
           </button>

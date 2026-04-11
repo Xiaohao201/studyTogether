@@ -51,6 +51,8 @@ export default function MapPage() {
   const [showSubjectDialog, setShowSubjectDialog] = useState(false);
   const [subjectInput, setSubjectInput] = useState('');
   const [showIncomingCallDialog, setShowIncomingCallDialog] = useState(false);
+  const [showMobilePanel, setShowMobilePanel] = useState(false);
+  const bottomSheetRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -171,6 +173,26 @@ export default function MapPage() {
     router.push(`/study-room/${roomCode}`);
   };
 
+  // Bottom sheet touch drag handlers
+  const [sheetTouchStart, setSheetTouchStart] = useState<number | null>(null);
+
+  const handleSheetTouchStart = (e: React.TouchEvent) => {
+    setSheetTouchStart(e.touches[0].clientY);
+  };
+
+  const handleSheetTouchMove = (e: React.TouchEvent) => {
+    if (sheetTouchStart === null) return;
+    const deltaY = e.touches[0].clientY - sheetTouchStart;
+    if (deltaY > 80) {
+      setShowMobilePanel(false);
+      setSheetTouchStart(null);
+    }
+  };
+
+  const handleSheetTouchEnd = () => {
+    setSheetTouchStart(null);
+  };
+
   if (!isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -179,13 +201,76 @@ export default function MapPage() {
     );
   }
 
+  const renderNearbyUserList = () => (
+    <>
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">
+          正在搜索附近的学习者...
+        </div>
+      ) : nearbyUsers.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <p className="mb-2">附近暂无正在学习的伙伴</p>
+          <p className="text-sm">成为第一个在这个区域学习的人吧！</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {nearbyUsers.map((nearbyUser) => (
+            <div
+              key={nearbyUser.id}
+              className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
+              onClick={() => setSelectedUser(nearbyUser)}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="font-medium text-gray-900 dark:text-white">
+                    {nearbyUser.username}
+                  </h3>
+                  {nearbyUser.subject && (
+                    <p className="text-sm text-indigo-600 dark:text-indigo-400">
+                      {nearbyUser.subject}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center space-x-2">
+                    <CallButton
+                      userId={nearbyUser.id}
+                      username={nearbyUser.username}
+                      variant="icon"
+                      onCallInitiated={() => {}}
+                    />
+                    <StudyRoomButton
+                      userId={nearbyUser.id}
+                      username={nearbyUser.username}
+                      subject={nearbyUser.subject}
+                      variant="icon"
+                      onRoomCreated={handleStudyRoomCreated}
+                    />
+                  </div>
+                </div>
+                <div className="text-right ml-3">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {nearbyUser.distance_meters < 1000
+                      ? `${Math.round(nearbyUser.distance_meters)}m`
+                      : `${(nearbyUser.distance_meters / 1000).toFixed(1)}km`}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {nearbyUser.city || '未知位置'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 px-3 md:px-4 py-2 md:py-3 safe-top">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <h1 className="text-lg md:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
               StudyTogether
             </h1>
             <div className="hidden md:block text-sm text-gray-600 dark:text-gray-400">
@@ -197,8 +282,8 @@ export default function MapPage() {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400" data-testid="map-username">
+          <div className="flex items-center space-x-2 md:space-x-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block" data-testid="map-username">
               <span className="font-medium">{user.username}</span>
               {user.subject && <span className="ml-2">({user.subject})</span>}
             </div>
@@ -210,70 +295,12 @@ export default function MapPage() {
       </header>
 
       {/* Map and Sidebar */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto" data-testid="map-sidebar">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Desktop Sidebar */}
+        <aside className="hidden md:block w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto" data-testid="map-sidebar">
           <div className="p-4">
             <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
-
-            {isLoading ? (
-              <div className="text-center py-8 text-gray-500">
-                正在搜索附近的学习者...
-              </div>
-            ) : nearbyUsers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="mb-2">附近暂无正在学习的伙伴</p>
-                <p className="text-sm">成为第一个在这个区域学习的人吧！</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {nearbyUsers.map((nearbyUser) => (
-                  <div
-                    key={nearbyUser.id}
-                    className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
-                    onClick={() => setSelectedUser(nearbyUser)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {nearbyUser.username}
-                        </h3>
-                        {nearbyUser.subject && (
-                          <p className="text-sm text-indigo-600 dark:text-indigo-400">
-                            {nearbyUser.subject}
-                          </p>
-                        )}
-                        <div className="mt-2 flex items-center space-x-2">
-                          <CallButton
-                            userId={nearbyUser.id}
-                            username={nearbyUser.username}
-                            variant="icon"
-                            onCallInitiated={() => {}}
-                          />
-                          <StudyRoomButton
-                            userId={nearbyUser.id}
-                            username={nearbyUser.username}
-                            subject={nearbyUser.subject}
-                            variant="icon"
-                            onRoomCreated={handleStudyRoomCreated}
-                          />
-                        </div>
-                      </div>
-                      <div className="text-right ml-3">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {nearbyUser.distance_meters < 1000
-                            ? `${Math.round(nearbyUser.distance_meters)}m`
-                            : `${(nearbyUser.distance_meters / 1000).toFixed(1)}km`}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {nearbyUser.city || '未知位置'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {renderNearbyUserList()}
           </div>
         </aside>
 
@@ -289,23 +316,58 @@ export default function MapPage() {
             onMarkerClick={setSelectedUser}
           />
         </main>
+
+        {/* Mobile floating button to open bottom sheet */}
+        <button
+          className="md:hidden absolute bottom-20 left-1/2 -translate-x-1/2 z-30 bg-indigo-600 text-white px-5 py-3 rounded-full shadow-lg flex items-center space-x-2 active:bg-indigo-700 touch-manipulation"
+          onClick={() => setShowMobilePanel(true)}
+        >
+          <span>👥</span>
+          <span className="text-sm font-medium">{nearbyUsers.length} 位附近</span>
+        </button>
+
+        {/* Mobile Bottom Sheet overlay */}
+        {showMobilePanel && (
+          <div
+            className="md:hidden fixed inset-0 bg-black/40 z-40"
+            onClick={() => setShowMobilePanel(false)}
+          />
+        )}
+
+        {/* Mobile Bottom Sheet panel */}
+        <div
+          ref={bottomSheetRef}
+          className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl transition-transform duration-300 safe-bottom ${
+            showMobilePanel ? 'translate-y-0' : 'translate-y-full'
+          }`}
+          style={{ maxHeight: '50vh' }}
+          onTouchStart={handleSheetTouchStart}
+          onTouchMove={handleSheetTouchMove}
+          onTouchEnd={handleSheetTouchEnd}
+        >
+          <div className="bottom-sheet-handle" />
+          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(50vh - 20px)' }}>
+            <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
+            {renderNearbyUserList()}
+          </div>
+        </div>
       </div>
 
       {/* User Status Bar */}
       {currentLocation && (
-        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2">
+        <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-3 md:px-4 py-2 safe-bottom">
           <div className="max-w-7xl mx-auto flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-600 dark:text-gray-400">
-                状态: <span className={`font-medium ${activeSession ? 'text-green-600' : 'text-gray-600'}`}>
-                  {activeSession ? '学习中' : '在线'}
+            <div className="flex items-center space-x-2 md:space-x-4 overflow-x-auto">
+              <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                <span className={`font-medium ${activeSession ? 'text-green-600' : 'text-gray-600'}`}>
+                  {activeSession ? '📚 学习中' : '🟢 在线'}
                 </span>
               </span>
-              <span className="text-gray-600 dark:text-gray-400">
+              <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap hidden sm:inline">
                 位置: <span className="font-medium">已共享</span>
               </span>
               {activeSession && (
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="text-gray-600 dark:text-gray-400 whitespace-nowrap hidden sm:inline">
                   学习: <span className="font-medium">{activeSession.subject}</span>
                 </span>
               )}
@@ -317,7 +379,7 @@ export default function MapPage() {
                 </Button>
               ) : (
                 <Button size="sm" onClick={() => setShowSubjectDialog(true)}>
-                  开始学习会话
+                  开始学习
                 </Button>
               )}
             </div>
@@ -327,8 +389,8 @@ export default function MapPage() {
 
       {/* Subject Dialog */}
       {showSubjectDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-5 sm:p-6 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4">开始学习会话</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               你要学习什么科目？
@@ -339,12 +401,13 @@ export default function MapPage() {
               onChange={(e) => setSubjectInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleStartSession()}
               placeholder="例如：Python编程、考研数学"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white mb-4"
+              className="w-full min-h-[44px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-gray-700 dark:text-white mb-4"
               autoFocus
             />
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
+                className="min-h-[44px]"
                 onClick={() => {
                   setShowSubjectDialog(false);
                   setSubjectInput('');
@@ -352,7 +415,11 @@ export default function MapPage() {
               >
                 取消
               </Button>
-              <Button onClick={handleStartSession} disabled={!subjectInput.trim()}>
+              <Button
+                className="min-h-[44px]"
+                onClick={handleStartSession}
+                disabled={!subjectInput.trim()}
+              >
                 开始学习
               </Button>
             </div>
