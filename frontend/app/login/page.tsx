@@ -1,7 +1,7 @@
 // Login page with form validation
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -20,8 +20,19 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading, error, isAuthenticated, isHydrated, initialize } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
+
+  // Initialize auth and redirect if already logged in
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      router.replace('/map');
+    }
+  }, [isHydrated, isAuthenticated, router]);
 
   const {
     register,

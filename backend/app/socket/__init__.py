@@ -71,6 +71,13 @@ async def connect(sid, environ, auth):
         connected_users[sid] = user_id
         logger.info(f"[Socket] User {user_id} connected (sid={sid})")
 
+        # Broadcast friend online status
+        try:
+            from app.socket.friend_handler import handle_friend_connect
+            await handle_friend_connect(user_id)
+        except Exception as e:
+            logger.error(f"[Socket] Error broadcasting friend online status: {e}")
+
         return True
 
     except Exception as e:
@@ -91,6 +98,13 @@ async def disconnect(sid):
     user_id = connected_users.pop(sid, None)
     if user_id:
         logger.info(f"[Socket] User {user_id} disconnected (sid={sid})")
+
+        # Broadcast friend offline status
+        try:
+            from app.socket.friend_handler import handle_friend_disconnect
+            await handle_friend_disconnect(user_id)
+        except Exception as e:
+            logger.error(f"[Socket] Error broadcasting friend offline status: {e}")
 
         # Notify study room participants about disconnect
         try:

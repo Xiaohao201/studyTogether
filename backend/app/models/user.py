@@ -65,6 +65,8 @@ class User(Base):
     call_participations = relationship("CallParticipant", back_populates="user", cascade="all, delete-orphan")
     hosted_study_rooms = relationship("StudyRoom", back_populates="host", cascade="all, delete-orphan")
     study_room_participations = relationship("StudyRoomParticipant", back_populates="user", cascade="all, delete-orphan")
+    friendships_sent = relationship("Friendship", foreign_keys="Friendship.requester_id", back_populates="requester", cascade="all, delete-orphan")
+    friendships_received = relationship("Friendship", foreign_keys="Friendship.addressee_id", back_populates="addressee", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, email={self.email})>"

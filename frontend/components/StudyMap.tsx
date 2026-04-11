@@ -10,11 +10,21 @@ import { useLocationStore } from '../store';
 const AMAP_KEY = process.env.NEXT_PUBLIC_AMAP_KEY || '';
 const AMAP_SECRET = process.env.NEXT_PUBLIC_AMAP_SECRET || '';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface StudyMapProps {
   center?: [number, number]; // [longitude, latitude]
   zoom?: number;
   nearbyUsers?: NearbyUser[];
   onMarkerClick?: (user: NearbyUser) => void;
+  userLocation?: { latitude: number; longitude: number } | null;
 }
 
 export function StudyMap({
@@ -22,12 +32,16 @@ export function StudyMap({
   zoom = 12,
   nearbyUsers = [],
   onMarkerClick,
+  userLocation,
 }: StudyMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const userMarkerRef = useRef<any>(null);
+  const userInfoWindowRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [centeredOnUser, setCenteredOnUser] = useState(false);
 
   // Initialize map
   useEffect(() => {
@@ -70,12 +84,10 @@ export function StudyMap({
           mapInstance.current = map;
           setMapLoaded(true);
         } catch (err) {
-          console.error('Failed to initialize map:', err);
           setError('地图初始化失败');
         }
       })
       .catch((err: any) => {
-        console.error('Failed to load AMap:', err);
         setError('高德地图加载失败，请检查密钥配置');
       });
 
@@ -87,6 +99,25 @@ export function StudyMap({
       }
     };
   }, []);
+
+  // Auto-center map when user location first becomes available
+  useEffect(() => {
+    if (!mapInstance.current || !mapLoaded || !userLocation) return;
+
+    if (!centeredOnUser) {
+      const newCenter: [number, number] = [userLocation.longitude, userLocation.latitude];
+      // First time: smooth animation to user's location with street-level zoom
+      mapInstance.current.setZoomAndCenter(15, newCenter, false, 600);
+      setCenteredOnUser(true);
+    }
+  }, [userLocation, mapLoaded, centeredOnUser]);
+
+  // Re-center on user handler
+  const handleRecenter = () => {
+    if (!mapInstance.current || !userLocation) return;
+    const pos: [number, number] = [userLocation.longitude, userLocation.latitude];
+    mapInstance.current.setZoomAndCenter(15, pos, false, 600);
+  };
 
   // Update markers when nearbyUsers change
   useEffect(() => {
@@ -125,10 +156,10 @@ export function StudyMap({
       const infoWindow = new (window as any).AMap.InfoWindow({
         content: `
           <div style="padding: 12px; min-width: 180px; max-width: 280px;">
-            <h3 style="font-weight: bold; font-size: 16px; margin: 0 0 8px 0;">${user.username}</h3>
-            <p style="font-size: 14px; color: #666; margin: 4px 0;">${user.subject || '未设置科目'}</p>
+            <h3 style="font-weight: bold; font-size: 16px; margin: 0 0 8px 0;">${escapeHtml(user.username)}</h3>
+            <p style="font-size: 14px; color: #666; margin: 4px 0;">${user.subject ? escapeHtml(user.subject) : '未设置科目'}</p>
             <p style="font-size: 14px; color: #999; margin: 4px 0;">距离: ${distanceText}</p>
-            ${user.city ? `<p style="font-size: 12px; color: #999; margin: 4px 0;">${user.city}</p>` : ''}
+            ${user.city ? `<p style="font-size: 12px; color: #999; margin: 4px 0;">${escapeHtml(user.city)}</p>` : ''}
           </div>
         `,
         offset: new (window as any).AMap.Pixel(0, -44),
@@ -147,44 +178,52 @@ export function StudyMap({
     });
   }, [nearbyUsers, mapLoaded, onMarkerClick]);
 
-  // Update user's own location marker
+  // Update user's own location marker — reacts to location changes
   useEffect(() => {
     if (!mapInstance.current || !mapLoaded) return;
 
-    const { currentLocation } = useLocationStore.getState();
+    const loc = userLocation ?? useLocationStore.getState().currentLocation;
+    if (!loc) return;
 
-    if (currentLocation) {
-      // Create user's own location marker
-      const content = `
-        <div class="user-marker">
-          <div style="width: 36px; height: 36px; background-color: #22c55e; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center;">
-            <svg style="width: 18px; height: 18px; color: white;" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-            </svg>
-          </div>
-        </div>
-      `;
-
-      const marker = new (window as any).AMap.Marker({
-        position: [currentLocation.longitude, currentLocation.latitude],
-        content: content,
-        offset: new (window as any).AMap.Pixel(-18, -36),
-        title: '你的位置',
-        zIndex: 999,
-      });
-
-      const infoWindow = new (window as any).AMap.InfoWindow({
-        content: '<div style="padding: 8px;"><p style="font-weight: bold; margin: 0;">你的位置</p></div>',
-        offset: new (window as any).AMap.Pixel(0, -36),
-      });
-
-      marker.on('click', () => {
-        infoWindow.open(mapInstance.current, marker.getPosition());
-      });
-
-      marker.setMap(mapInstance.current);
+    // Remove previous user marker and infoWindow
+    if (userMarkerRef.current) {
+      userInfoWindowRef.current?.close();
+      userMarkerRef.current.setMap(null);
+      userMarkerRef.current = null;
+      userInfoWindowRef.current = null;
     }
-  }, [mapLoaded]);
+
+    const content = `
+      <div class="user-marker">
+        <div style="width: 36px; height: 36px; background-color: #22c55e; border-radius: 50%; border: 4px solid white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); display: flex; align-items: center; justify-content: center;">
+          <svg style="width: 18px; height: 18px; color: white;" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+          </svg>
+        </div>
+      </div>
+    `;
+
+    const marker = new (window as any).AMap.Marker({
+      position: [loc.longitude, loc.latitude],
+      content: content,
+      offset: new (window as any).AMap.Pixel(-18, -36),
+      title: '你的位置',
+      zIndex: 999,
+    });
+
+    const infoWindow = new (window as any).AMap.InfoWindow({
+      content: '<div style="padding: 8px;"><p style="font-weight: bold; margin: 0;">你的位置</p></div>',
+      offset: new (window as any).AMap.Pixel(0, -36),
+    });
+
+    marker.on('click', () => {
+      infoWindow.open(mapInstance.current, marker.getPosition());
+    });
+
+    marker.setMap(mapInstance.current);
+    userMarkerRef.current = marker;
+    userInfoWindowRef.current = infoWindow;
+  }, [mapLoaded, userLocation]);
 
   return (
     <div className="relative w-full h-full">
@@ -208,6 +247,20 @@ export function StudyMap({
       )}
 
       <div ref={mapContainer} className="w-full h-full amap-container" />
+
+      {/* Re-center on me button */}
+      {mapLoaded && userLocation && (
+        <button
+          onClick={handleRecenter}
+          className="absolute bottom-6 right-3 z-20 w-11 h-11 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-95 transition-transform border border-gray-200 dark:border-gray-600"
+          title="回到我的位置"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

@@ -144,7 +144,8 @@ class LocationService:
         longitude: float,
         radius_km: float = 5.0,
         user_id: Optional[str] = None,
-        privacy_filter: Optional[List[str]] = None
+        privacy_filter: Optional[List[str]] = None,
+        viewer_friend_ids: Optional[set[str]] = None
     ) -> List[dict]:
         """
         Find nearby users using spherical distance calculation.
@@ -158,6 +159,7 @@ class LocationService:
             radius_km: Search radius in kilometers
             user_id: Exclude this user ID from results (optional)
             privacy_filter: List of privacy modes to include (default: ['fuzzy', 'exact'])
+            viewer_friend_ids: Set of friend user IDs for exact location sharing (optional)
 
         Returns:
             List of nearby users with distance in meters
@@ -234,7 +236,11 @@ class LocationService:
             nearby_users.append({
                 'user': user,
                 'location': location,
-                'distance_meters': distance if distance else 0
+                'distance_meters': distance if distance else 0,
+                'is_friend': (
+                    viewer_friend_ids is not None
+                    and str(user.id) in viewer_friend_ids
+                ),
             })
 
         return nearby_users

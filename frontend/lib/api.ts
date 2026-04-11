@@ -3,7 +3,15 @@ import axios, { AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'ax
 import type { ApiResponse, AuthResponse, LoginCredentials, RegisterData, User } from '../types';
 
 // API base URL from environment
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app';
+export const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://studytogether-production.up.railway.app';
+
+// Flag: when true, the response interceptor skips the hard redirect to /login
+// so that authStore.initialize() can handle failure gracefully.
+let isInitializing = false;
+
+export function setInitializing(value: boolean) {
+  isInitializing = value;
+}
 
 // Create axios instance
 export const api = axios.create({
@@ -20,14 +28,12 @@ api.interceptors.request.use(
     if (typeof window === 'undefined') return config;
 
     const token = localStorage.getItem('access_token');
-    console.log('[API Request]', config.method?.toUpperCase(), config.url, config.data);
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
-    console.error('[API Request error]', error);
     return Promise.reject(error);
   }
 );
@@ -55,8 +61,19 @@ api.interceptors.response.use(
 
           const { access_token } = response.data;
 
-          // Save new token
+          // Save new token to localStorage
           localStorage.setItem('access_token', access_token);
+
+          // Also sync to Zustand auth store
+          try {
+            const { useAuthStore } = await import('../store/authStore');
+            const state = useAuthStore.getState();
+            if (state.accessToken) {
+              useAuthStore.setState({ accessToken: access_token });
+            }
+          } catch {
+            // Store not available yet — localStorage is the fallback
+          }
 
           // Update header and retry original request
           if (originalRequest.headers) {
@@ -65,10 +82,11 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        // Refresh failed, clear tokens
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        if (typeof window !== 'undefined') {
+        // During initialization, don't hard-redirect — let initialize() handle it
+        if (!isInitializing) {
           window.location.href = '/login';
         }
         return Promise.reject(refreshError);
@@ -241,6 +259,46 @@ export const studyRoomsApi = {
     const response = await api.get(
       `/api/study-rooms/${roomCode}/messages?limit=${limit}&offset=${offset}`
     );
+    return response.data;
+  },
+};
+
+// Friends API
+export const friendsApi = {
+  getFriends: async () => {
+    const response = await api.get('/api/friends');
+    return response.data;
+  },
+
+  getPendingRequests: async () => {
+    const response = await api.get('/api/friends/requests');
+    return response.data;
+  },
+
+  sendFriendRequest: async (addresseeId: string) => {
+    const response = await api.post('/api/friends/request', {
+      addressee_id: addresseeId,
+    });
+    return response.data;
+  },
+
+  acceptFriendRequest: async (friendshipId: string) => {
+    const response = await api.put(`/api/friends/request/${friendshipId}/accept`);
+    return response.data;
+  },
+
+  rejectFriendRequest: async (friendshipId: string) => {
+    const response = await api.put(`/api/friends/request/${friendshipId}/reject`);
+    return response.data;
+  },
+
+  deleteFriend: async (friendshipId: string) => {
+    const response = await api.delete(`/api/friends/${friendshipId}`);
+    return response.data;
+  },
+
+  searchUsers: async (query: string, limit: number = 10) => {
+    const response = await api.get(`/api/users/search?q=${encodeURIComponent(query)}&limit=${limit}`);
     return response.data;
   },
 };

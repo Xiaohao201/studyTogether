@@ -217,6 +217,67 @@ export interface ParticipantMediaChangedData {
 }
 
 // Study Room Types
+
+// Friend Types
+export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
+
+export interface PublicUserResponse {
+  id: string
+  username: string
+  subject?: string | null
+  status: UserStatus
+  study_duration_minutes: number
+}
+
+export interface FriendUser {
+  id: string
+  username: string
+  subject?: string | null
+  status: UserStatus
+  study_duration_minutes: number
+}
+
+export interface FriendshipResponse {
+  id: string
+  requester_id: string
+  addressee_id: string
+  status: FriendshipStatus
+  created_at: string
+  updated_at: string
+  friend: FriendUser
+}
+
+export interface FriendRequestsResponse {
+  sent: FriendshipResponse[]
+  received: FriendshipResponse[]
+}
+
+export interface FriendListResponse {
+  id: string
+  username: string
+  subject?: string | null
+  status: UserStatus
+  study_duration_minutes: number
+  is_online: boolean
+  friendship_id: string
+}
+
+export interface FriendRequestReceivedData {
+  friendship_id: string
+  friend: FriendUser
+  created_at: string
+}
+
+export interface FriendRequestAcceptedData {
+  friendship_id: string
+  friend: FriendUser
+}
+
+export interface FriendStatusChangeData {
+  userId?: string
+  isOnline?: boolean
+  onlineFriendIds?: string[]
+}
 export type StudyRoomStatus = 'waiting' | 'active' | 'ended'
 export type TimerPhase = 'focus' | 'break'
 

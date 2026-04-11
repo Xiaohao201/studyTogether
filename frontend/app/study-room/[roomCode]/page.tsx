@@ -24,7 +24,7 @@ export default function StudyRoomPage() {
   const roomCode = params.roomCode as string
   const [mobileTab, setMobileTab] = useState<MobileTab>('timer')
 
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, isHydrated, initialize } = useAuthStore()
   const {
     currentRoom,
     isHost,
@@ -46,12 +46,18 @@ export default function StudyRoomPage() {
 
   const socketRegistered = useRef(false)
 
-  // Redirect if not authenticated
+  // Initialize auth on mount
   useEffect(() => {
+    initialize()
+  }, [])
+
+  // Redirect if not authenticated (after hydration)
+  useEffect(() => {
+    if (!isHydrated) return
     if (!isAuthenticated) {
       router.push('/login')
     }
-  }, [isAuthenticated, router])
+  }, [isHydrated, isAuthenticated, router])
 
   // Fetch room data on mount
   useEffect(() => {
@@ -128,7 +134,7 @@ export default function StudyRoomPage() {
     router.push('/map')
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isHydrated || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>加载中...</p>

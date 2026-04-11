@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -22,7 +23,18 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register: registerUser, isLoading, error } = useAuthStore();
+  const { register: registerUser, isLoading, error, isAuthenticated, isHydrated, initialize } = useAuthStore();
+
+  // Initialize auth and redirect if already logged in
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      router.replace('/map');
+    }
+  }, [isHydrated, isAuthenticated, router]);
 
   const {
     register,

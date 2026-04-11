@@ -8,11 +8,13 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { Button } from '../../components/ui/button';
-import { useAuthStore, useLocationStore, useSessionStore, useCallStore, useStudyRoomStore } from '../../store';
+import { useAuthStore, useLocationStore, useSessionStore, useCallStore, useStudyRoomStore, useFriendStore } from '../../store';
 import { CallButton } from '../../components/call/CallButton';
 import { IncomingCallDialog } from '../../components/call/IncomingCallDialog';
 import { StudyRoomButton } from '../../components/study-room/StudyRoomButton';
 import { IncomingStudyInviteDialog } from '../../components/study-room/IncomingStudyInviteDialog';
+import { FriendPanel } from '../../components/friends/FriendPanel';
+import { FriendRequestBadge } from '../../components/friends/FriendRequestBadge';
 import { getCallSocket } from '../../lib/callSocket';
 import type { NearbyUser } from '../../types';
 
@@ -28,7 +30,7 @@ const StudyMap = dynamicImport(() => import('../../components/StudyMap').then(mo
 
 export default function MapPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, isHydrated, initialize, logout } = useAuthStore();
   const {
     currentLocation,
     nearbyUsers,
@@ -52,14 +54,21 @@ export default function MapPage() {
   const [subjectInput, setSubjectInput] = useState('');
   const [showIncomingCallDialog, setShowIncomingCallDialog] = useState(false);
   const [showMobilePanel, setShowMobilePanel] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'nearby' | 'friends'>('nearby');
   const bottomSheetRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not authenticated
+  // Initialize auth on mount — validates persisted token
   useEffect(() => {
+    initialize();
+  }, []);
+
+  // Redirect if not authenticated (after hydration completes)
+  useEffect(() => {
+    if (!isHydrated) return;
     if (!isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [isHydrated, isAuthenticated, router]);
 
   // Connect call socket and register event handlers on mount
   const socketInitialized = useRef(false);
@@ -92,6 +101,9 @@ export default function MapPage() {
         useStudyRoomStore.getState().handleInviteRejected();
       },
     });
+
+    // Register friend handlers
+    useFriendStore.getState().registerSocketHandlers();
 
     socketInitialized.current = true;
 
@@ -193,7 +205,7 @@ export default function MapPage() {
     setSheetTouchStart(null);
   };
 
-  if (!isAuthenticated || !user) {
+  if (!isHydrated || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>加载中...</p>
@@ -283,6 +295,7 @@ export default function MapPage() {
           </div>
 
           <div className="flex items-center space-x-2 md:space-x-4">
+            <FriendRequestBadge onClick={() => setSidebarTab('friends')} />
             <div className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block" data-testid="map-username">
               <span className="font-medium">{user.username}</span>
               {user.subject && <span className="ml-2">({user.subject})</span>}
@@ -298,9 +311,38 @@ export default function MapPage() {
       <div className="flex-1 flex overflow-hidden relative">
         {/* Desktop Sidebar */}
         <aside className="hidden md:block w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto" data-testid="map-sidebar">
+          {/* Sidebar tabs */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setSidebarTab('nearby')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                sidebarTab === 'nearby'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              附近
+            </button>
+            <button
+              onClick={() => setSidebarTab('friends')}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                sidebarTab === 'friends'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              好友
+            </button>
+          </div>
           <div className="p-4">
-            <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
-            {renderNearbyUserList()}
+            {sidebarTab === 'nearby' ? (
+              <>
+                <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
+                {renderNearbyUserList()}
+              </>
+            ) : (
+              <FriendPanel onStudyRoomCreated={handleStudyRoomCreated} />
+            )}
           </div>
         </aside>
 
@@ -314,6 +356,7 @@ export default function MapPage() {
             }
             nearbyUsers={nearbyUsers}
             onMarkerClick={setSelectedUser}
+            userLocation={currentLocation}
           />
         </main>
 
@@ -340,15 +383,44 @@ export default function MapPage() {
           className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl transition-transform duration-300 safe-bottom ${
             showMobilePanel ? 'translate-y-0' : 'translate-y-full'
           }`}
-          style={{ maxHeight: '50vh' }}
+          style={{ maxHeight: '60vh' }}
           onTouchStart={handleSheetTouchStart}
           onTouchMove={handleSheetTouchMove}
           onTouchEnd={handleSheetTouchEnd}
         >
           <div className="bottom-sheet-handle" />
-          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(50vh - 20px)' }}>
-            <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
-            {renderNearbyUserList()}
+          {/* Mobile tabs */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setSidebarTab('nearby')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                sidebarTab === 'nearby'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-500'
+              }`}
+            >
+              附近
+            </button>
+            <button
+              onClick={() => setSidebarTab('friends')}
+              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                sidebarTab === 'friends'
+                  ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400'
+                  : 'text-gray-500'
+              }`}
+            >
+              好友
+            </button>
+          </div>
+          <div className="p-4 overflow-y-auto" style={{ maxHeight: 'calc(60vh - 60px)' }}>
+            {sidebarTab === 'nearby' ? (
+              <>
+                <h2 className="text-lg font-semibold mb-4">附近的学习伙伴</h2>
+                {renderNearbyUserList()}
+              </>
+            ) : (
+              <FriendPanel onStudyRoomCreated={handleStudyRoomCreated} />
+            )}
           </div>
         </div>
       </div>

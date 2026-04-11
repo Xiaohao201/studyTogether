@@ -24,6 +24,9 @@ import type {
   TimerState,
   TimerPhaseChanged,
   StudyRoomMessageData,
+  FriendRequestReceivedData,
+  FriendRequestAcceptedData,
+  FriendStatusChangeData,
 } from '@/types'
 
 export interface CallSocketCallbacks {
@@ -46,6 +49,10 @@ export interface CallSocketCallbacks {
   onStudyRoomMessage?: (data: StudyRoomMessageData) => void
   onStudyInviteFailed?: (data: { roomCode: string; reason: string }) => void
   onStudyRoomParticipantDisconnected?: (data: { roomCode: string; userId: string }) => void
+  // Friend events
+  onFriendRequestReceived?: (data: FriendRequestReceivedData) => void
+  onFriendRequestAccepted?: (data: FriendRequestAcceptedData) => void
+  onFriendStatusChange?: (data: FriendStatusChangeData) => void
   // Connection
   onConnected?: () => void
   onDisconnected?: () => void
@@ -221,6 +228,21 @@ class CallSocketManager {
     this.socket.on('study-room-participant-disconnected', (data: { roomCode: string; userId: string }) => {
       console.log('[CallSocket] Study room participant disconnected:', data)
       this.callbacks.onStudyRoomParticipantDisconnected?.(data)
+    })
+
+    // Friend events
+    this.socket.on('friend-request-received', (data: FriendRequestReceivedData) => {
+      console.log('[CallSocket] Friend request received:', data)
+      this.callbacks.onFriendRequestReceived?.(data)
+    })
+
+    this.socket.on('friend-request-accepted', (data: FriendRequestAcceptedData) => {
+      console.log('[CallSocket] Friend request accepted:', data)
+      this.callbacks.onFriendRequestAccepted?.(data)
+    })
+
+    this.socket.on('friend-status-change', (data: FriendStatusChangeData) => {
+      this.callbacks.onFriendStatusChange?.(data)
     })
   }
 

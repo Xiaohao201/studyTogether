@@ -112,12 +112,22 @@ async def get_nearby_users(
     """
     location_service = LocationService(db)
 
+    # Get friend IDs for exact location sharing
+    viewer_friend_ids: set[str] | None = None
+    try:
+        from app.services.friendship_service import FriendshipService
+        friend_svc = FriendshipService(db)
+        viewer_friend_ids = await friend_svc.get_friend_ids(str(current_user.id))
+    except Exception:
+        pass
+
     nearby = await location_service.find_nearby_users(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
         user_id=str(current_user.id),
-        privacy_filter=['fuzzy', 'exact']
+        privacy_filter=['fuzzy', 'exact'],
+        viewer_friend_ids=viewer_friend_ids,
     )
 
     # Debug logging
@@ -132,6 +142,15 @@ async def get_nearby_users(
         user = item['user']
         location = item['location']
         distance = item['distance_meters']
+        is_friend = item.get('is_friend', False)
+
+        # Friends with show_exact_to_friends=True get exact coordinates
+        use_exact = (
+            is_friend
+            and user.show_exact_to_friends
+            and location.latitude is not None
+            and location.longitude is not None
+        )
 
         results.append(NearbyUserResponse(
             id=str(user.id),
@@ -140,8 +159,8 @@ async def get_nearby_users(
             status=user.status,
             distance_meters=round(distance, 2) if distance else 0,
             location={
-                "latitude": float(location.fuzzy_latitude) if location.fuzzy_latitude else 0,
-                "longitude": float(location.fuzzy_longitude) if location.fuzzy_longitude else 0,
+                "latitude": float(location.latitude) if use_exact else (float(location.fuzzy_latitude) if location.fuzzy_latitude else 0),
+                "longitude": float(location.longitude) if use_exact else (float(location.fuzzy_longitude) if location.fuzzy_longitude else 0),
             },
             city=location.city,
             district=location.district,
